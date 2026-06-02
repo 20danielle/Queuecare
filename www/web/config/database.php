@@ -18,12 +18,15 @@ class Database
     private function __construct() {
         date_default_timezone_set('Africa/Douala');
 
+        $mysqlUrl = $this->envValue(['MYSQL_URL', 'MYSQL_PUBLIC_URL'], '');
+        $parsed = $mysqlUrl !== '' ? $this->parseMysqlUrl($mysqlUrl) : [];
+
         // Railway : surcharger avec les variables MySQL ou les variables locales
-        $this->host = $this->envValue(['MYSQLHOST', 'DB_HOST'], $this->host);
-        $this->dbname = $this->envValue(['MYSQLDATABASE', 'DB_NAME'], $this->dbname);
-        $this->user = $this->envValue(['MYSQLUSER', 'DB_USER'], $this->user);
-        $this->pass = $this->envValue(['MYSQLPASSWORD', 'DB_PASS'], $this->pass);
-        $this->port = (int) $this->envValue(['MYSQLPORT', 'DB_PORT'], (string) $this->port);
+        $this->host = $this->envValue(['MYSQLHOST', 'MYSQL_HOST', 'DB_HOST'], $parsed['host'] ?? $this->host);
+        $this->dbname = $this->envValue(['MYSQLDATABASE', 'MYSQL_DATABASE', 'DB_NAME'], $parsed['db'] ?? $this->dbname);
+        $this->user = $this->envValue(['MYSQLUSER', 'MYSQL_USER', 'DB_USER'], $parsed['user'] ?? $this->user);
+        $this->pass = $this->envValue(['MYSQLPASSWORD', 'MYSQL_PASSWORD', 'DB_PASS'], $parsed['pass'] ?? $this->pass);
+        $this->port = (int) $this->envValue(['MYSQLPORT', 'MYSQL_PORT', 'DB_PORT'], isset($parsed['port']) ? (string) $parsed['port'] : (string) $this->port);
     }
     private function __clone() {}
 
@@ -36,6 +39,22 @@ class Database
             }
         }
         return $default;
+    }
+
+    private function parseMysqlUrl(string $url): array
+    {
+        $parts = parse_url($url);
+        if (!$parts || empty($parts['host'])) {
+            return [];
+        }
+
+        return [
+            'host' => $parts['host'],
+            'port' => isset($parts['port']) ? (int) $parts['port'] : 3306,
+            'user' => isset($parts['user']) ? urldecode($parts['user']) : 'root',
+            'pass' => isset($parts['pass']) ? urldecode($parts['pass']) : '',
+            'db'   => isset($parts['path']) ? ltrim($parts['path'], '/') : 'files_attente',
+        ];
     }
 
     public static function getInstance(): self
@@ -59,7 +78,7 @@ class Database
                 $this->pdo = new PDO($dsn, $this->user, $this->pass, $options);
             } catch (PDOException $e) {
                 error_log('[DB] ' . $e->getMessage());
-                die('Erreur de connexion à la base de données.');
+                die('Erreur de connexion ?? la base de donn??es.');
             }
         }
         return $this->pdo;

@@ -1,5 +1,5 @@
 <?php
-// ─── Configuration BDD ────────────────────────────────────────
+// ????????? Configuration BDD ????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
 // Lit les variables Railway MySQL en production
 // Sinon utilise les valeurs locales (WAMP/Docker)
 
@@ -13,11 +13,41 @@ function envValue(array $keys, string $default): string {
     return $default;
 }
 
-define('DB_HOST', envValue(['MYSQLHOST', 'DB_HOST'], 'localhost'));
-define('DB_NAME', envValue(['MYSQLDATABASE', 'DB_NAME'], 'files_attente'));
-define('DB_USER', envValue(['MYSQLUSER', 'DB_USER'], 'root'));
-define('DB_PASS', envValue(['MYSQLPASSWORD', 'DB_PASS'], ''));
-define('DB_PORT', envValue(['MYSQLPORT', 'DB_PORT'], '3306'));
+function envInt(array $keys, int $default): int {
+    foreach ($keys as $key) {
+        $value = getenv($key);
+        if ($value !== false && $value !== '') {
+            return (int) $value;
+        }
+    }
+    return $default;
+}
+
+function parseMysqlUrl(string $url): array {
+    $parts = parse_url($url);
+    if (!$parts || empty($parts['host'])) {
+        return [];
+    }
+
+    $result = [
+        'host' => $parts['host'],
+        'port' => isset($parts['port']) ? (string) $parts['port'] : '3306',
+        'user' => isset($parts['user']) ? urldecode($parts['user']) : 'root',
+        'pass' => isset($parts['pass']) ? urldecode($parts['pass']) : '',
+        'db'   => isset($parts['path']) ? ltrim($parts['path'], '/') : 'files_attente',
+    ];
+
+    return $result;
+}
+
+$mysqlUrl = envValue(['MYSQL_URL', 'MYSQL_PUBLIC_URL'], '');
+$parsedMysqlUrl = $mysqlUrl !== '' ? parseMysqlUrl($mysqlUrl) : [];
+
+define('DB_HOST', envValue(['MYSQLHOST', 'MYSQL_HOST', 'DB_HOST'], $parsedMysqlUrl['host'] ?? 'localhost'));
+define('DB_NAME', envValue(['MYSQLDATABASE', 'MYSQL_DATABASE', 'DB_NAME'], $parsedMysqlUrl['db'] ?? 'files_attente'));
+define('DB_USER', envValue(['MYSQLUSER', 'MYSQL_USER', 'DB_USER'], $parsedMysqlUrl['user'] ?? 'root'));
+define('DB_PASS', envValue(['MYSQLPASSWORD', 'MYSQL_PASSWORD', 'DB_PASS'], $parsedMysqlUrl['pass'] ?? ''));
+define('DB_PORT', (string) envInt(['MYSQLPORT', 'MYSQL_PORT', 'DB_PORT'], isset($parsedMysqlUrl['port']) ? (int) $parsedMysqlUrl['port'] : 3306));
 define('JWT_SECRET', getenv('JWT_SECRET') ?: 'queuecare_secret_2024');
 
 function getDB(): PDO {
