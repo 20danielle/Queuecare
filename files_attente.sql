@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1:3306
--- Généré le : sam. 30 mai 2026 à 13:31
+-- Généré le : mer. 17 juin 2026 à 12:31
 -- Version du serveur : 8.0.31
 -- Version de PHP : 8.0.26
 
@@ -87,6 +87,69 @@ DELIMITER ;
 -- --------------------------------------------------------
 
 --
+-- Structure de la table `configuration_hopital`
+--
+
+DROP TABLE IF EXISTS `configuration_hopital`;
+CREATE TABLE IF NOT EXISTS `configuration_hopital` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `nom_hopital` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `adresse` text COLLATE utf8mb4_unicode_ci,
+  `telephone` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `email` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `logo_path` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `setup_completed` tinyint(1) DEFAULT '0',
+  `date_installation` datetime DEFAULT CURRENT_TIMESTAMP,
+  `date_mise_a_jour` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `configuration_hopital`
+--
+
+INSERT INTO `configuration_hopital` (`id`, `nom_hopital`, `adresse`, `telephone`, `email`, `logo_path`, `setup_completed`, `date_installation`, `date_mise_a_jour`) VALUES
+(1, 'CMA de Tyo', 'Entrée domicile Tankou', '694319623', 'cmatyo@gmail.com', 'public/uploads/hopital/logo_1780515899.jpg', 1, '2026-06-03 14:50:03', '2026-06-03 20:44:59');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `conges_gestionnaires`
+--
+
+DROP TABLE IF EXISTS `conges_gestionnaires`;
+CREATE TABLE IF NOT EXISTS `conges_gestionnaires` (
+  `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `gestionnaire_id` int UNSIGNED NOT NULL,
+  `date_debut` date NOT NULL,
+  `date_fin` date NOT NULL,
+  `motif` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_gest_conge` (`gestionnaire_id`,`date_debut`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `conges_medecins`
+--
+
+DROP TABLE IF EXISTS `conges_medecins`;
+CREATE TABLE IF NOT EXISTS `conges_medecins` (
+  `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `medecin_id` int UNSIGNED NOT NULL,
+  `date_debut` date NOT NULL,
+  `date_fin` date NOT NULL,
+  `motif` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_medecin_conge` (`medecin_id`,`date_debut`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Structure de la table `consultations`
 --
 
@@ -98,15 +161,20 @@ CREATE TABLE IF NOT EXISTS `consultations` (
   `medecin_id` int UNSIGNED DEFAULT NULL COMMENT 'Médecin qui prend en charge',
   `emploi_temps_id` int UNSIGNED DEFAULT NULL COMMENT 'Créneau de l''emploi du temps réservé',
   `qr_code_id` int UNSIGNED DEFAULT NULL COMMENT 'QR code utilisé pour la prise de rendez-vous',
-  `statut` enum('en_attente','confirme','en_cours','traite','annule','absent') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'en_attente',
+  `statut` enum('en_attente','confirme','en_cours','en_pause','traite','annule','absent') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'en_attente',
   `rang` int UNSIGNED DEFAULT NULL COMMENT 'Position dans la file d''attente du jour',
   `mode_prise` enum('LIGNE','PLACE','MANUEL','QR_CODE') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'PLACE' COMMENT 'LIGNE=domicile, PLACE=QR Code scanné, MANUEL=Saisie manuelle, QR_CODE=Généré par QR',
   `heure_emission` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Heure de création du ticket',
   `heure_passage_estimee` datetime DEFAULT NULL COMMENT 'Heure de passage calculée (duree_estimee × rang)',
   `heure_debut_reelle` datetime DEFAULT NULL COMMENT 'Heure réelle de début de consultation',
   `heure_fin_reelle` datetime DEFAULT NULL COMMENT 'Heure réelle de fin de consultation',
+  `heure_pause` datetime DEFAULT NULL COMMENT 'Heure de mise en pause (départ pour examen externe)',
+  `motif_pause` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Motif de la pause (ex: Radio, Analyse sanguine…)',
+  `duree_pause_cumulee` int UNSIGNED NOT NULL DEFAULT '0' COMMENT 'Durée totale cumulée des pauses en secondes',
+  `priorite_retour` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Priorité absolue au retour d''examen externe',
   `duree_estimee` int UNSIGNED DEFAULT NULL COMMENT 'Durée estimée en secondes au moment de la réservation',
   `motif` text COLLATE utf8mb4_unicode_ci COMMENT 'Motif de la consultation (optionnel)',
+  `prochain_rdv_id` int UNSIGNED DEFAULT NULL COMMENT 'ID de la consultation de suivi planifiée par le médecin',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_consult_patient` (`patient_id`),
@@ -117,38 +185,39 @@ CREATE TABLE IF NOT EXISTS `consultations` (
   KEY `idx_consult_emission` (`heure_emission`),
   KEY `idx_consult_rang` (`sous_service_id`,`rang`),
   KEY `idx_consult_qrcode` (`qr_code_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Consultations des patients (remplace rendez_vous)';
+) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Consultations des patients (remplace rendez_vous)';
 
 --
 -- Déchargement des données de la table `consultations`
 --
 
-INSERT INTO `consultations` (`id`, `patient_id`, `sous_service_id`, `medecin_id`, `emploi_temps_id`, `qr_code_id`, `statut`, `rang`, `mode_prise`, `heure_emission`, `heure_passage_estimee`, `heure_debut_reelle`, `heure_fin_reelle`, `duree_estimee`, `motif`, `created_at`) VALUES
-(1, 1, 2, NULL, NULL, NULL, 'confirme', 1, 'PLACE', '2026-05-04 10:30:30', '2026-05-04 10:00:30', NULL, NULL, 1800, 'mal au ventre', '2026-05-04 10:30:30'),
-(2, 2, 1, 5, NULL, NULL, 'traite', 1, 'PLACE', '2026-05-26 15:58:14', '2026-05-26 14:58:14', NULL, NULL, 1800, NULL, '2026-05-26 15:58:14'),
-(3, 2, 1, 5, NULL, NULL, 'traite', 2, 'PLACE', '2026-05-26 15:59:15', '2026-05-26 15:29:15', NULL, NULL, 1800, NULL, '2026-05-26 15:59:15'),
-(4, 2, 1, 5, NULL, NULL, 'traite', 3, 'PLACE', '2026-05-26 16:00:16', '2026-05-26 16:00:16', NULL, NULL, 1800, NULL, '2026-05-26 16:00:16'),
-(5, 2, 1, 5, NULL, NULL, 'absent', 4, 'PLACE', '2026-05-26 16:01:17', '2026-05-26 15:01:17', NULL, NULL, 1800, NULL, '2026-05-26 16:01:17'),
-(6, 2, 1, 5, NULL, NULL, 'absent', 5, 'PLACE', '2026-05-26 16:02:22', '2026-05-26 15:32:22', NULL, NULL, 1800, NULL, '2026-05-26 16:02:22'),
-(7, 2, 1, 5, NULL, NULL, 'traite', 6, 'PLACE', '2026-05-26 16:03:24', '2026-05-26 15:03:24', NULL, NULL, 1800, NULL, '2026-05-26 16:03:24'),
-(8, 3, 1, 5, NULL, NULL, 'absent', 1, 'PLACE', '2026-05-27 14:41:58', '2026-05-27 13:41:58', NULL, NULL, 1800, NULL, '2026-05-27 14:41:58'),
-(9, 3, 1, 5, NULL, NULL, 'traite', 99, 'PLACE', '2026-05-27 20:00:09', '2026-05-27 15:00:00', NULL, NULL, 1800, 'Test manuel', '2026-05-27 20:00:09'),
-(10, 4, 1, 5, NULL, NULL, 'traite', 1, 'PLACE', '2026-05-28 21:34:43', '2026-05-28 21:34:43', NULL, NULL, 1800, NULL, '2026-05-28 21:34:43'),
-(11, 4, 1, 5, NULL, NULL, 'absent', 2, 'PLACE', '2026-05-28 21:36:32', '2026-05-28 22:06:32', NULL, NULL, 1800, NULL, '2026-05-28 21:36:32'),
-(12, 4, 1, 5, NULL, NULL, 'traite', 3, 'PLACE', '2026-05-28 21:37:33', '2026-05-28 22:37:33', NULL, NULL, 1800, NULL, '2026-05-28 21:37:33'),
-(13, 4, 1, 5, NULL, NULL, 'annule', 4, 'PLACE', '2026-05-28 21:38:34', '2026-05-28 23:08:34', NULL, NULL, 1800, NULL, '2026-05-28 21:38:34'),
-(14, 4, 1, 5, NULL, NULL, 'annule', 5, 'PLACE', '2026-05-28 21:39:35', '2026-05-28 23:39:35', NULL, NULL, 1800, NULL, '2026-05-28 21:39:35'),
-(15, 4, 1, 5, NULL, NULL, 'annule', 6, 'PLACE', '2026-05-28 21:40:36', '2026-05-29 00:10:36', NULL, NULL, 1800, NULL, '2026-05-28 21:40:36'),
-(16, 5, 1, 5, NULL, NULL, 'traite', 7, 'PLACE', '2026-05-28 21:59:12', '2026-05-28 21:59:12', '2026-05-28 23:30:06', '2026-05-28 23:30:09', 1800, NULL, '2026-05-28 21:59:12'),
-(17, 6, 1, 5, NULL, NULL, 'traite', 1, 'PLACE', '2026-05-29 12:12:44', '2026-05-29 12:12:44', '2026-05-29 12:12:59', '2026-05-29 12:17:18', 1800, NULL, '2026-05-29 12:12:44'),
-(18, 7, 1, NULL, NULL, NULL, 'en_attente', 2, 'PLACE', '2026-05-29 12:13:49', '2026-05-29 12:13:49', NULL, NULL, 1800, NULL, '2026-05-29 12:13:49'),
-(19, 8, 1, NULL, NULL, NULL, 'en_attente', 3, 'PLACE', '2026-05-29 12:30:59', '2026-05-29 12:30:59', NULL, NULL, 1800, NULL, '2026-05-29 12:30:59'),
-(20, 9, 1, NULL, NULL, NULL, 'en_attente', 4, 'PLACE', '2026-05-29 12:45:12', '2026-05-29 12:45:12', NULL, NULL, 1800, NULL, '2026-05-29 12:45:12'),
-(21, 10, 1, 5, NULL, NULL, 'traite', 5, 'PLACE', '2026-05-29 13:12:17', '2026-05-29 13:12:17', '2026-05-29 13:12:32', '2026-05-29 13:26:32', 1800, NULL, '2026-05-29 13:12:17'),
-(22, 11, 1, 5, NULL, NULL, 'traite', 6, 'PLACE', '2026-05-29 13:16:15', '2026-05-29 13:16:15', NULL, '2026-05-29 13:30:20', 1800, 'Avortement', '2026-05-29 13:16:15'),
-(23, 12, 1, 5, NULL, NULL, 'traite', 1, 'PLACE', '2026-05-30 13:27:37', '2026-05-30 13:27:37', '2026-05-30 13:27:56', '2026-05-30 13:59:44', 1800, NULL, '2026-05-30 13:27:37'),
-(24, 13, 1, 5, NULL, NULL, 'traite', 2, 'PLACE', '2026-05-30 13:28:30', '2026-05-30 13:28:30', '2026-05-30 13:59:51', '2026-05-30 14:11:28', 1800, NULL, '2026-05-30 13:28:30'),
-(25, 14, 1, 5, NULL, NULL, 'en_cours', 3, 'PLACE', '2026-05-30 13:29:13', '2026-05-30 13:29:13', '2026-05-30 14:12:10', NULL, 1800, NULL, '2026-05-30 13:29:13');
+INSERT INTO `consultations` (`id`, `patient_id`, `sous_service_id`, `medecin_id`, `emploi_temps_id`, `qr_code_id`, `statut`, `rang`, `mode_prise`, `heure_emission`, `heure_passage_estimee`, `heure_debut_reelle`, `heure_fin_reelle`, `heure_pause`, `motif_pause`, `duree_pause_cumulee`, `priorite_retour`, `duree_estimee`, `motif`, `prochain_rdv_id`, `created_at`) VALUES
+(1, 1, 3, 1, NULL, NULL, 'traite', 1, 'PLACE', '2026-06-04 21:13:00', '2026-06-04 21:13:00', '2026-06-04 21:13:47', '2026-06-04 21:25:08', NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-04 21:13:00'),
+(2, 2, 3, 1, NULL, NULL, 'traite', 2, 'PLACE', '2026-06-04 21:23:13', '2026-06-04 21:23:13', '2026-06-04 21:25:12', '2026-06-04 21:43:20', NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-04 21:23:13'),
+(3, 3, 3, 1, NULL, NULL, 'en_cours', 1, 'PLACE', '2026-06-05 12:56:38', '2026-06-05 12:56:38', '2026-06-05 13:24:20', NULL, NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-05 12:56:38'),
+(4, 1, 3, 1, NULL, NULL, 'en_attente', 1, 'PLACE', '2026-06-06 20:29:05', '2026-06-06 20:29:05', NULL, NULL, NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-06 20:29:05'),
+(5, 1, 3, 1, NULL, NULL, 'en_attente', 1, 'PLACE', '2026-06-07 20:31:22', '2026-06-08 20:31:22', NULL, NULL, NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-07 20:31:22'),
+(6, 4, 3, 1, NULL, NULL, 'en_cours', 2, 'PLACE', '2026-06-07 20:52:51', '2026-06-07 20:52:51', '2026-06-07 21:32:55', NULL, NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-07 20:52:51'),
+(7, 1, 3, 1, NULL, NULL, 'en_attente', 1, 'PLACE', '2026-06-11 20:00:17', '2026-06-11 20:00:17', NULL, NULL, NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-11 20:00:17'),
+(8, 2, 3, 1, NULL, NULL, 'traite', 1, 'PLACE', '2026-06-12 09:41:39', '2026-06-12 09:41:39', '2026-06-12 10:21:44', '2026-06-12 10:22:01', NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-12 09:41:39'),
+(9, 1, 3, 1, NULL, NULL, 'traite', 2, 'PLACE', '2026-06-12 10:21:28', '2026-06-12 10:21:28', '2026-06-12 10:21:42', '2026-06-12 10:22:04', NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-12 10:21:28'),
+(10, 3, 3, 1, NULL, NULL, 'absent', 3, 'PLACE', '2026-06-12 10:23:18', '2026-06-12 10:23:18', '2026-06-12 10:26:08', NULL, NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-12 10:23:18'),
+(11, 5, 3, 1, NULL, NULL, 'absent', 4, 'PLACE', '2026-06-12 10:24:09', '2026-06-12 10:24:09', '2026-06-12 10:26:06', NULL, NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-12 10:24:09'),
+(12, 6, 3, 1, NULL, NULL, 'traite', 5, 'PLACE', '2026-06-12 10:25:26', '2026-06-12 10:25:26', '2026-06-12 10:26:04', '2026-06-12 10:26:29', NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-12 10:25:26'),
+(13, 7, 3, 1, NULL, NULL, 'traite', 6, 'PLACE', '2026-06-12 10:27:25', '2026-06-12 10:27:25', '2026-06-12 10:27:41', '2026-06-12 22:23:33', NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-12 10:27:25'),
+(14, 2, 3, 1, NULL, NULL, 'en_attente', 1, 'PLACE', '2026-06-13 07:33:36', '2026-06-14 07:33:36', NULL, NULL, NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-13 07:33:36'),
+(15, 3, 3, 1, NULL, NULL, 'en_attente', 2, 'PLACE', '2026-06-13 07:34:19', '2026-06-14 08:03:36', NULL, NULL, NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-13 07:34:19'),
+(16, 1, 3, 1, NULL, NULL, 'en_attente', 3, 'PLACE', '2026-06-13 07:55:07', '2026-06-14 08:33:36', NULL, NULL, NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-13 07:55:07'),
+(17, 1, 3, 1, NULL, NULL, 'absent', 1, 'PLACE', '2026-06-17 11:07:53', '2026-06-18 08:00:00', NULL, NULL, NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-17 11:07:53'),
+(18, 3, 3, 1, NULL, NULL, 'absent', 2, 'PLACE', '2026-06-17 11:08:22', '2026-06-18 08:30:00', NULL, NULL, NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-17 11:08:22'),
+(19, 2, 3, 1, NULL, NULL, 'absent', 3, 'PLACE', '2026-06-17 11:25:06', '2026-06-18 09:00:00', NULL, NULL, NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-17 11:25:06'),
+(20, 8, 3, 1, NULL, NULL, 'traite', 4, 'PLACE', '2026-06-17 11:41:29', '2026-06-17 11:41:29', '2026-06-17 11:51:08', '2026-06-17 12:10:51', NULL, NULL, 529, 0, 1800, NULL, NULL, '2026-06-17 11:41:29'),
+(21, 9, 3, 1, NULL, NULL, 'traite', 5, 'PLACE', '2026-06-17 11:56:18', '2026-06-17 12:11:29', '2026-06-17 11:56:58', '2026-06-17 12:05:27', NULL, NULL, 0, 0, 1800, NULL, 23, '2026-06-17 11:56:18'),
+(22, 10, 3, 1, NULL, NULL, 'traite', 6, 'PLACE', '2026-06-17 12:02:08', '2026-06-17 12:41:29', '2026-06-17 12:11:03', '2026-06-17 12:21:08', NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-17 12:02:08'),
+(23, 9, 3, 1, NULL, NULL, 'absent', 4, 'MANUEL', '2026-06-17 12:02:44', '2026-06-18 09:30:00', NULL, NULL, NULL, NULL, 0, 0, 1800, 'Suivi', NULL, '2026-06-17 12:02:44'),
+(24, 11, 3, 1, NULL, NULL, 'traite', 7, 'PLACE', '2026-06-17 12:13:54', '2026-06-17 13:11:29', '2026-06-17 12:21:14', '2026-06-17 12:36:08', NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-17 12:13:54'),
+(25, 12, 3, 1, NULL, NULL, 'traite', 8, 'PLACE', '2026-06-17 12:37:59', '2026-06-17 12:51:14', '2026-06-17 12:38:36', '2026-06-17 13:21:09', NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-17 12:37:59'),
+(26, 13, 3, 1, NULL, NULL, 'absent', 9, 'PLACE', '2026-06-17 12:39:24', '2026-06-17 12:51:14', NULL, NULL, NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-17 12:39:24');
 
 --
 -- Déclencheurs `consultations`
@@ -234,7 +303,15 @@ CREATE TABLE IF NOT EXISTS `emplois_du_temps` (
   KEY `idx_edt_ss` (`sous_service_id`),
   KEY `idx_edt_medecin` (`medecin_id`),
   KEY `idx_edt_jour` (`jour`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Planning journalier des sous-services par médecin';
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Planning journalier des sous-services par médecin';
+
+--
+-- Déchargement des données de la table `emplois_du_temps`
+--
+
+INSERT INTO `emplois_du_temps` (`id`, `sous_service_id`, `medecin_id`, `jour`, `heure_debut`, `heure_fin`, `nb_creneaux`, `created_at`) VALUES
+(1, 3, 1, '2026-06-14', '08:00:00', '17:00:00', 0, '2026-06-14 12:45:32'),
+(2, 3, 1, '2026-06-18', '09:00:00', '10:00:00', 1, '2026-06-17 12:02:44');
 
 -- --------------------------------------------------------
 
@@ -255,16 +332,42 @@ CREATE TABLE IF NOT EXISTS `gestionnaires` (
   UNIQUE KEY `uq_gestionnaires_email` (`email`),
   UNIQUE KEY `uq_gestionnaires_telephone` (`telephone`),
   KEY `idx_gestionnaires_ss` (`sous_service_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Agents de gestion — chacun affecté à un sous-service';
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Agents de gestion — chacun affecté à un sous-service';
 
 --
 -- Déchargement des données de la table `gestionnaires`
 --
 
 INSERT INTO `gestionnaires` (`id`, `sous_service_id`, `nom`, `telephone`, `email`, `password`, `created_at`) VALUES
-(1, 1, 'KEUMBOU YEMLONG CEDRIC BERTINO', '654210976', 'bert1nokembou@gmail.com', '$2y$12$jsw0ZUbMhliSG5VpvJTnuOIk6tgIdkNd00vOCucrNlBp1sfKBwRi2', '2026-04-30 07:26:45'),
-(2, 2, 'MOUMI DEUTCHOUA MATHILDE', '677453688', 'mathildemoumi@gmail.com', '$2y$12$KGN5YGC6gmkpEavFlE5xCOhyamLEatMCkU91y0XJtyxyt2e/vTgT.', '2026-05-04 09:23:48'),
-(3, 1, 'Kala armand', '699123456', 'kalaarmand@gmail.com', '$2y$12$hsqc31ZKk1G1LNzeyXgiZeH/S65Kf6GqvTzamgwyyzHhgdYFG4NlC', '2026-05-26 15:48:32');
+(1, 3, 'ange zutchi', '696945237', 'angezutchi@gmail.com', '$2y$12$VxDIOeSgSHPd181cFArQf.BB1cJnDKHAM0SUZlBOXstVkgyvvzvNK', '2026-06-04 12:25:18');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `gestionnaire_jours_travail`
+--
+
+DROP TABLE IF EXISTS `gestionnaire_jours_travail`;
+CREATE TABLE IF NOT EXISTS `gestionnaire_jours_travail` (
+  `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `gestionnaire_id` int UNSIGNED NOT NULL,
+  `jour_semaine` tinyint UNSIGNED NOT NULL COMMENT '1=Lundi à 7=Dimanche',
+  `actif` tinyint(1) NOT NULL DEFAULT '1',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_gest_jour` (`gestionnaire_id`,`jour_semaine`)
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `gestionnaire_jours_travail`
+--
+
+INSERT INTO `gestionnaire_jours_travail` (`id`, `gestionnaire_id`, `jour_semaine`, `actif`, `created_at`) VALUES
+(1, 1, 1, 1, '2026-06-05 11:36:31'),
+(2, 1, 2, 1, '2026-06-05 11:36:31'),
+(3, 1, 3, 1, '2026-06-05 11:36:31'),
+(4, 1, 4, 1, '2026-06-05 11:36:31'),
+(5, 1, 5, 1, '2026-06-05 11:36:31');
 
 -- --------------------------------------------------------
 
@@ -289,18 +392,24 @@ CREATE TABLE IF NOT EXISTS `historique_durees` (
   KEY `idx_hist_consultation` (`consultation_id`),
   KEY `idx_hist_medecin` (`medecin_id`),
   KEY `idx_hist_created` (`created_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Historique des durées réelles — base du recalcul nocturne';
+) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Historique des durées réelles — base du recalcul nocturne';
 
 --
 -- Déchargement des données de la table `historique_durees`
 --
 
 INSERT INTO `historique_durees` (`id`, `sous_service_id`, `consultation_id`, `medecin_id`, `duree_reelle`, `heure_debut`, `jour_semaine`, `tranche_horaire`, `est_aberrant`, `created_at`) VALUES
-(1, 1, 16, 5, 3, '2026-05-28 23:30:06', 5, 23, 1, '2026-05-28 23:30:09'),
-(2, 1, 17, 5, 259, '2026-05-29 12:12:59', 6, 12, 0, '2026-05-29 12:17:18'),
-(3, 1, 21, 5, 840, '2026-05-29 13:12:32', 6, 13, 0, '2026-05-29 13:26:32'),
-(4, 1, 23, 5, 1908, '2026-05-30 13:27:56', 7, 13, 0, '2026-05-30 13:59:44'),
-(5, 1, 24, 5, 697, '2026-05-30 13:59:51', 7, 13, 0, '2026-05-30 14:11:28');
+(10, 3, 1, 1, 681, '2026-06-04 21:13:47', 5, 21, 0, '2026-06-04 21:25:08'),
+(11, 3, 2, 1, 1088, '2026-06-04 21:25:12', 5, 21, 0, '2026-06-04 21:43:20'),
+(12, 3, 8, 1, 17, '2026-06-12 10:21:44', 6, 10, 1, '2026-06-12 10:22:01'),
+(13, 3, 9, 1, 22, '2026-06-12 10:21:42', 6, 10, 1, '2026-06-12 10:22:04'),
+(14, 3, 12, 1, 25, '2026-06-12 10:26:04', 6, 10, 1, '2026-06-12 10:26:29'),
+(15, 3, 13, 1, 42952, '2026-06-12 10:27:41', 6, 10, 1, '2026-06-12 22:23:33'),
+(16, 3, 21, 1, 509, '2026-06-17 11:56:58', 4, 11, 0, '2026-06-17 12:05:27'),
+(17, 3, 20, 1, 1183, '2026-06-17 11:51:08', 4, 11, 0, '2026-06-17 12:10:51'),
+(18, 3, 22, 1, 605, '2026-06-17 12:11:03', 4, 12, 0, '2026-06-17 12:21:08'),
+(19, 3, 24, 1, 894, '2026-06-17 12:21:14', 4, 12, 0, '2026-06-17 12:36:08'),
+(20, 3, 25, 1, 2553, '2026-06-17 12:38:36', 4, 12, 0, '2026-06-17 13:21:09');
 
 --
 -- Déclencheurs `historique_durees`
@@ -314,6 +423,42 @@ CREATE TRIGGER `trg_historique_aberrant` BEFORE INSERT ON `historique_durees` FO
 END
 $$
 DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `horaires`
+--
+
+DROP TABLE IF EXISTS `horaires`;
+CREATE TABLE IF NOT EXISTS `horaires` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `service_id` int NOT NULL,
+  `jour` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `heure_debut` time DEFAULT NULL,
+  `heure_fin` time DEFAULT NULL,
+  `statut` enum('actif','inactif') COLLATE utf8mb4_unicode_ci DEFAULT 'actif',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `service_id` (`service_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `jours_travail`
+--
+
+DROP TABLE IF EXISTS `jours_travail`;
+CREATE TABLE IF NOT EXISTS `jours_travail` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `medecin_id` int NOT NULL,
+  `jour` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `actif` tinyint(1) DEFAULT '1',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `medecin_id` (`medecin_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -348,27 +493,56 @@ CREATE TABLE IF NOT EXISTS `medecins` (
   `prenom` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `specialite` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
   `telephone` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `service_id` int UNSIGNED DEFAULT NULL COMMENT 'Service hospitalier auquel appartient le médecin',
   `email` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `statut` enum('disponible','indisponible','conge') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'disponible',
   `photo` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Chemin vers la photo du médecin',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_medecins_email` (`email`),
-  KEY `idx_medecins_service` (`service_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Médecins intervenant dans les sous-services';
+  UNIQUE KEY `uq_medecins_email` (`email`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Médecins intervenant dans les sous-services';
 
 --
 -- Déchargement des données de la table `medecins`
 --
 
-INSERT INTO `medecins` (`id`, `nom`, `prenom`, `specialite`, `telephone`, `service_id`, `email`, `password`, `statut`, `photo`, `created_at`) VALUES
-(1, 'TEWALO NODZE', 'DANIELLE ERICA', 'Cardiologie', '+237678026482', NULL, 'ericatewalo@gmail.com', '$2y$12$J1BR/v.elXD6zDEbmlBw1eOFQe2v2egL1LVzgNefB2Cqcn4rGwvNK', 'disponible', NULL, '2026-04-28 22:04:00'),
-(2, 'KEITA', 'FLORA', 'Pédiatrie', '+237698003468', NULL, 'keitaflora@gmail.com', '$2y$12$epliY0pZjcOmpCp.QshT8On9hnjvJvNg7dM.Zn48yrAzLQ58ruMIW', 'disponible', NULL, '2026-05-04 09:26:19'),
-(3, 'KALA', 'Armand', 'Cardiologie', '+237698013425', 1, 'kalaarmand@gmail.com', '$2y$12$9oxOX.TLXB8fYz4QKYjtVu//8S7GiMT0q7bn34AbtnPsBWzZZC9O6', 'disponible', NULL, '2026-05-07 20:08:14'),
-(4, 'MATHILDE', 'MOUMI', 'Cardiologie', '0677453688', 1, 'mathildemoumi@gmail.com', '$2y$12$SZTqKfUEYm1rIEUsaWq5g.QRFOn1Ciw4GzVljW.NICgx0FqVAkwM2', 'disponible', NULL, '2026-05-26 15:50:45'),
-(5, 'KOUAM', 'Daris', 'Cardiologie', '659429067', 1, 'dariskouam@gmail.com', '$2y$12$XJ5gFSjiBz/PBaoVCB4IMuKkVCwprcvtqb65rY/sQkNpzFgIAANWK', 'disponible', 'public/uploads/medecins/medecin_6a1ad5727cd39.jpg', '2026-05-26 15:56:33');
+INSERT INTO `medecins` (`id`, `nom`, `prenom`, `specialite`, `telephone`, `email`, `password`, `statut`, `photo`, `created_at`) VALUES
+(1, 'MATHILDE', 'MOUMI', 'Cardiologie', '0677453688', 'mathildemoumi@gmail.com', '$2y$12$Q4LNostbNffHMSb0NRfleO8IgloC5aeFowzz6D52P1k/LHhsK6Bx6', 'disponible', NULL, '2026-06-04 11:56:31'),
+(2, 'MAGLOIRE', 'Ebele', 'Hématologie', '677889900', 'ebelemagloire@gmail.com', '$2y$10$oKdZTF726kgSu2G2fFlvSOASyyrAOcefyhGzS8SH3xTC610TzzNPS', 'disponible', NULL, '2026-06-16 19:34:26');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `medecin_jours_travail`
+--
+
+DROP TABLE IF EXISTS `medecin_jours_travail`;
+CREATE TABLE IF NOT EXISTS `medecin_jours_travail` (
+  `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `medecin_id` int UNSIGNED NOT NULL,
+  `jour_semaine` tinyint UNSIGNED NOT NULL COMMENT '1=Lundi à 7=Dimanche',
+  `actif` tinyint(1) NOT NULL DEFAULT '1',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_medecin_jour` (`medecin_id`,`jour_semaine`)
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Jours de travail des médecins';
+
+--
+-- Déchargement des données de la table `medecin_jours_travail`
+--
+
+INSERT INTO `medecin_jours_travail` (`id`, `medecin_id`, `jour_semaine`, `actif`, `created_at`) VALUES
+(1, 1, 1, 1, '2026-06-05 11:33:32'),
+(2, 1, 2, 1, '2026-06-05 11:33:32'),
+(3, 1, 3, 1, '2026-06-05 11:33:32'),
+(4, 1, 4, 1, '2026-06-05 11:33:32'),
+(5, 1, 5, 1, '2026-06-05 11:33:32'),
+(6, 1, 6, 1, '2026-06-05 11:33:32'),
+(7, 2, 1, 1, '2026-06-16 19:34:26'),
+(8, 2, 2, 1, '2026-06-16 19:34:26'),
+(9, 2, 3, 1, '2026-06-16 19:34:26'),
+(10, 2, 4, 1, '2026-06-16 19:34:26'),
+(11, 2, 5, 1, '2026-06-16 19:34:26');
 
 -- --------------------------------------------------------
 
@@ -390,7 +564,8 @@ CREATE TABLE IF NOT EXISTS `medecin_sous_service` (
 --
 
 INSERT INTO `medecin_sous_service` (`medecin_id`, `sous_service_id`, `date_affectation`) VALUES
-(5, 1, '2026-05-26');
+(1, 3, '2026-06-04'),
+(2, 4, '2026-06-16');
 
 -- --------------------------------------------------------
 
@@ -437,27 +612,44 @@ CREATE TABLE IF NOT EXISTS `patients` (
   UNIQUE KEY `uq_patients_email` (`email`),
   UNIQUE KEY `uq_patients_telephone` (`telephone`),
   KEY `idx_patients_statut` (`statut`)
-) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Patients / usagers du système';
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Patients / usagers du système';
 
 --
 -- Déchargement des données de la table `patients`
 --
 
 INSERT INTO `patients` (`id`, `nom`, `prenom`, `telephone`, `email`, `password`, `token_fcm`, `statut`, `date_inscription`) VALUES
-(1, 'kengne', 'marole', '+2375780564', 'marolekengne@gmail.com', NULL, NULL, 'actif', '2026-05-04 10:30:30'),
-(2, 'Kengne', 'Marole', '641237897', '641237897@noemail.local', NULL, NULL, 'actif', '2026-05-26 15:58:14'),
-(3, 'Nsang', 'Daniel', '654098723', 'danielnsang@gmail.com', NULL, NULL, 'actif', '2026-05-27 14:41:58'),
-(4, 'BOULA', 'AICHA', '651995688', 'boulaaicha@gmail.com', NULL, NULL, 'actif', '2026-05-27 19:21:05'),
-(5, 'BILOA', 'Harol', '696945237', 'harolbiloa@gmail.com', NULL, NULL, 'actif', '2026-05-28 21:59:12'),
-(6, 'KAMENI', 'AUREL', '698805553', 'aurelkameni@gmail.com', NULL, NULL, 'actif', '2026-05-29 12:12:44'),
-(7, 'KEITA', 'FLORA', '675430978', 'keitaflora@gmail.com', NULL, NULL, 'actif', '2026-05-29 12:13:49'),
-(8, 'KALLU', 'ANGE', '657428938', 'angekallu@gmail.com', NULL, NULL, 'actif', '2026-05-29 12:30:59'),
-(9, 'BOBOLO', 'CEDRIC', '678451209', 'cedricbobolo@gmail.com', NULL, NULL, 'actif', '2026-05-29 12:45:12'),
-(10, 'MAMI', 'WATER', '612987645', 'mamiwater@gmail.com', NULL, NULL, 'actif', '2026-05-29 13:12:17'),
-(11, 'ABANA', 'ALANA', '698776534', 'alanaabana@gmail.com', NULL, NULL, 'actif', '2026-05-29 13:16:15'),
-(12, 'ZUTCHI', 'EMMA', '653210000', '653210000@noemail.local', NULL, NULL, 'actif', '2026-05-30 13:27:37'),
-(13, 'ZUTCHI', 'COCO', '678665544', 'coco@gmail.com', NULL, NULL, 'actif', '2026-05-30 13:28:30'),
-(14, 'ZUTCHI GRACE', 'GRACE', '677889900', 'grace@gmail.com', NULL, NULL, 'actif', '2026-05-30 13:29:13');
+(1, 'BOULA', 'AICHA', '65195688', 'boulaaicha@gmail.com', NULL, NULL, 'actif', '2026-06-04 21:13:00'),
+(2, 'KAMENI', 'LOIC', '690870424', 'kameniloic@gmail.com', NULL, NULL, 'actif', '2026-06-04 21:23:13'),
+(3, 'papao', 'andre', '677488969', 'andrepapao@gmail.com', NULL, NULL, 'actif', '2026-06-05 12:56:38'),
+(4, 'KONDRE', 'GASPARD', '657788990', 'kondregaspard@gmail.com', NULL, NULL, 'actif', '2026-06-07 20:52:51'),
+(5, 'Lao', 'minga', '655443322', 'laominga@gmail.com', NULL, NULL, 'actif', '2026-06-12 10:24:08'),
+(6, 'ENDER', 'THOMAS', '677889900', 'enderthomas@gmail.com', NULL, NULL, 'actif', '2026-06-12 10:25:26'),
+(7, 'Bopda', 'jean', '611223344', 'bopdajean@gmail.com', NULL, NULL, 'actif', '2026-06-12 10:27:24'),
+(8, 'MOUMI', 'NEILL', '677401159', 'neillmoumi@gmail.com', NULL, NULL, 'actif', '2026-06-17 11:41:29'),
+(9, 'ABENA', 'AMOS', '655321467', 'amosabena@gmail.com', NULL, NULL, 'actif', '2026-06-17 11:56:17'),
+(10, 'Olomo', 'ondoa', '690987076', 'ondoaolomo@gmail.com', NULL, NULL, 'actif', '2026-06-17 12:02:08'),
+(11, 'KENNE', 'AUDE', '650607080', 'kenneaude@gmail.com', NULL, NULL, 'actif', '2026-06-17 12:13:54'),
+(12, 'CHAMBERLAIN', 'EMMA', '699887766', 'emmachamberlain@gmail.com', NULL, NULL, 'actif', '2026-06-17 12:37:59'),
+(13, 'SITUATION', 'LENA', '650403020', 'lenasituation@gmail.com', NULL, NULL, 'actif', '2026-06-17 12:39:24');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `patient_api_tokens`
+--
+
+DROP TABLE IF EXISTS `patient_api_tokens`;
+CREATE TABLE IF NOT EXISTS `patient_api_tokens` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `patient_id` int NOT NULL,
+  `token` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `token` (`token`),
+  KEY `patient_id` (`patient_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -484,25 +676,20 @@ CREATE TABLE IF NOT EXISTS `qr_codes` (
   KEY `idx_qrcodes_statut` (`statut`),
   KEY `idx_qrcodes_expire_at` (`expire_at`),
   KEY `idx_qrcodes_created_by` (`created_by`)
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='QR codes générés pour les sous-services';
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='QR codes générés pour les sous-services';
 
 --
 -- Déchargement des données de la table `qr_codes`
 --
 
 INSERT INTO `qr_codes` (`id`, `sous_service_id`, `token`, `qr_code_path`, `expire_at`, `content`, `scan_count`, `statut`, `created_at`, `created_by`) VALUES
-(1, 1, '88e62349e60757ec2fc5381455d6fb5cf70b86c20905c1f5a8aa33f4977c9018', 'public/qrcodes/qrcode_1_1779897287.png', '2026-05-27 17:14:47', 'http://localhost/fil-attente2/index.php?action=prise_rdv&token=88e62349e60757ec2fc5381455d6fb5cf70b86c20905c1f5a8aa33f4977c9018', 0, 'inactif', '2026-05-27 16:54:48', 3),
-(2, 1, 'b415c3226a69da302a2d9f7b851ade3f39b6e044e366b6d7cf820c1ce6ade636', 'public/qrcodes/qrcode_1_1779897410.png', '2026-05-27 17:16:50', 'http://localhost/fil-attente2/index.php?action=prise_rdv&token=b415c3226a69da302a2d9f7b851ade3f39b6e044e366b6d7cf820c1ce6ade636', 0, 'inactif', '2026-05-27 16:56:50', 3),
-(3, 1, '09eb2b29ae471e4010676c99a984039f8960d01ba0356b7bd34fa6754f440886', 'public/qrcodes/qrcode_1_1779897419.png', '2026-05-27 17:16:59', 'http://localhost/fil-attente2/index.php?action=prise_rdv&token=09eb2b29ae471e4010676c99a984039f8960d01ba0356b7bd34fa6754f440886', 0, 'inactif', '2026-05-27 16:57:00', 3),
-(4, 1, 'b856f9c3e7a297cb74589addfb33ff99145665f9e923f3b23693d60e71137048', 'public/qrcodes/qrcode_1_1779897942.png', '2026-05-27 17:25:42', 'http://localhost/fil-attente2/index.php?action=prise_rdv&token=b856f9c3e7a297cb74589addfb33ff99145665f9e923f3b23693d60e71137048', 0, 'expire', '2026-05-27 17:05:43', 3),
-(5, 1, '774b8fe48a0d1b33169da5ea8e9e9e864b05ea0b0a395ce827919af1a19deab3', 'public/qrcodes/qrcode_1_1779905987.png', '2026-05-27 19:39:47', 'http://localhost/fil-attente2/index.php?action=prise_rdv&token=774b8fe48a0d1b33169da5ea8e9e9e864b05ea0b0a395ce827919af1a19deab3', 0, 'inactif', '2026-05-27 19:19:47', 3),
-(6, 1, '7722acd16ada59173d7895a21684ecb38bf964c26f156685858871fdf03a57b2', 'public/qrcodes/qrcode_1_1779908986.png', '2026-05-27 20:29:46', 'http://localhost/fil-attente2/index.php?action=prise_rdv&token=7722acd16ada59173d7895a21684ecb38bf964c26f156685858871fdf03a57b2', 0, 'inactif', '2026-05-27 20:09:46', 3),
-(7, 1, 'd0292cc33e7c6671376d82a1d6de52b97852132a31d9828cf4c508c62c8ff7db', 'public/qrcodes/qrcode_1_1779910767.png', '2026-05-27 20:59:27', 'http://localhost/fil-attente2/index.php?action=prise_rdv&token=d0292cc33e7c6671376d82a1d6de52b97852132a31d9828cf4c508c62c8ff7db', 0, 'expire', '2026-05-27 20:39:27', 3),
-(8, 1, '2dfaf9fa18c0c31da0d781e95c430a224a187e9484ca31798c7f3f424f99df76', 'public/qrcodes/qrcode_1_1780005446.png', '2026-05-28 23:17:26', 'http://localhost/fil-attente2/index.php?action=prise_rdv&token=2dfaf9fa18c0c31da0d781e95c430a224a187e9484ca31798c7f3f424f99df76', 0, 'inactif', '2026-05-28 22:57:27', 3),
-(9, 1, '2270fa95dad27dd21704ef4cbfc724d9bbbb24a705c8a0df076de17b2859c0ff', 'public/qrcodes/qrcode_1_1780006654.png', '2026-05-28 23:37:34', 'http://localhost/fil-attente2/index.php?action=prise_rdv&token=2270fa95dad27dd21704ef4cbfc724d9bbbb24a705c8a0df076de17b2859c0ff', 0, 'inactif', '2026-05-28 23:17:34', 3),
-(10, 1, '114fb7b749dfc19d7955d454fbcb3bd67c43d3f7449f03922808aaa4bda82c5c', 'public/qrcodes/qrcode_1_1780007855.png', '2026-05-28 23:57:35', 'http://localhost/fil-attente2/index.php?action=prise_rdv&token=114fb7b749dfc19d7955d454fbcb3bd67c43d3f7449f03922808aaa4bda82c5c', 0, 'expire', '2026-05-28 23:37:35', 3),
-(11, 1, 'e3f5a6d02e9f046b883859cce1d05e156a7484bad1c5359869dc4e8fa7b3286f', 'public/qrcodes/qrcode_1_1780054181.png', '2026-05-29 12:49:41', 'http://localhost/fil-attente2/index.php?action=prise_rdv&token=e3f5a6d02e9f046b883859cce1d05e156a7484bad1c5359869dc4e8fa7b3286f', 0, 'expire', '2026-05-29 12:29:41', 3),
-(12, 1, 'd03833b887a7411bae9ff94d5b1d4d458ad509c5e8b0561b443f0b5282aa1927', 'public/qrcodes/qrcode_1_1780147520.png', '2026-05-30 14:45:20', 'http://localhost/fil-attente2/index.php?action=prise_rdv&token=d03833b887a7411bae9ff94d5b1d4d458ad509c5e8b0561b443f0b5282aa1927', 0, 'actif', '2026-05-30 14:25:21', 3);
+(2, 3, '6456d16d1681ec1825b56a7cacafec491f65e9c1c80bc1547b613336bae4d4f6', 'public/qrcodes/qrcode_3_1780654355.png', '2026-06-05 11:32:35', 'http://localhost/file-attente/scan_ticket.php?token=6456d16d1681ec1825b56a7cacafec491f65e9c1c80bc1547b613336bae4d4f6', 0, 'expire', '2026-06-05 11:12:36', 1),
+(3, 3, 'cb372c4cfdd95df96ca3257dbf9b3d5176c13f0edf947f844ce5d06d4885ce94', 'public/qrcodes/qrcode_3_1780659573.png', '2026-06-05 12:59:33', 'http://localhost/file-attente/scan_ticket.php?token=cb372c4cfdd95df96ca3257dbf9b3d5176c13f0edf947f844ce5d06d4885ce94', 0, 'expire', '2026-06-05 12:39:33', 1),
+(4, 3, '50450c623a78091cbe4a90f9c1d057c3840ce99802ea71aa5922705730b9b8d1', 'public/qrcodes/qrcode_3_1780774121.png', '2026-06-06 20:48:41', 'http://localhost/fil-attente2/scan_ticket.php?token=50450c623a78091cbe4a90f9c1d057c3840ce99802ea71aa5922705730b9b8d1', 0, 'expire', '2026-06-06 20:28:43', 1),
+(5, 3, 'fa49a3c424b9146ad6e6c73d0e27ad855a1c8e1cad2374bd7a3462cbf63abcbe', 'public/qrcodes/qrcode_3_1780895995.png', '2026-06-08 06:39:55', 'http://localhost/fil-attente2/scan_ticket.php?token=fa49a3c424b9146ad6e6c73d0e27ad855a1c8e1cad2374bd7a3462cbf63abcbe', 0, 'expire', '2026-06-08 06:19:55', 1),
+(6, 3, 'b659ad0c6865c79eaa70dabc5454bd22aa09a4a62d610993cff4779cf17f6ab4', 'public/qrcodes/qrcode_3_1781690292.png', '2026-06-17 11:18:12', 'http://localhost/file-attente/scan_ticket.php?token=b659ad0c6865c79eaa70dabc5454bd22aa09a4a62d610993cff4779cf17f6ab4', 0, 'expire', '2026-06-17 10:58:13', 1),
+(7, 3, 'c51aeb45b31cd1cea8a3e5cf46c92619abffa6c3427a90355e947fc37ee0b38d', 'public/qrcodes/qrcode_3_1781692850.png', '2026-06-17 12:00:50', 'http://localhost/file-attente/scan_ticket.php?token=c51aeb45b31cd1cea8a3e5cf46c92619abffa6c3427a90355e947fc37ee0b38d', 0, 'expire', '2026-06-17 11:40:51', 1),
+(8, 3, '12cea81a6cbc95422b636d732e781646b646662c18a0361d69c21dd43971f3c8', 'public/qrcodes/qrcode_3_1781697080.png', '2026-06-17 13:11:20', 'http://localhost/file-attente/scan_ticket.php?token=12cea81a6cbc95422b636d732e781646b646662c18a0361d69c21dd43971f3c8', 0, 'expire', '2026-06-17 12:51:21', 1);
 
 -- --------------------------------------------------------
 
@@ -516,6 +703,11 @@ CREATE TABLE IF NOT EXISTS `services` (
   `nom` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'Nom de l''hôpital / établissement',
   `description` text COLLATE utf8mb4_unicode_ci,
   `adresse` varchar(300) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `horaires_ouverture` time DEFAULT '08:00:00',
+  `horaires_fermeture` time DEFAULT '18:00:00',
+  `pause_debut` time DEFAULT NULL,
+  `pause_fin` time DEFAULT NULL,
+  `jours_fermeture` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT '',
   `horaires` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Ex : Lun-Ven 07h00-17h00',
   `statut` enum('actif','inactif') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'actif',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -527,8 +719,8 @@ CREATE TABLE IF NOT EXISTS `services` (
 -- Déchargement des données de la table `services`
 --
 
-INSERT INTO `services` (`id`, `nom`, `description`, `adresse`, `horaires`, `statut`, `created_at`) VALUES
-(1, 'CMA Tyo de Baleng', '', 'PMI, entrée école normale', 'Lun-Ven 7h00-19h00', 'actif', '2026-04-28 22:00:13');
+INSERT INTO `services` (`id`, `nom`, `description`, `adresse`, `horaires_ouverture`, `horaires_fermeture`, `pause_debut`, `pause_fin`, `jours_fermeture`, `horaires`, `statut`, `created_at`) VALUES
+(1, 'CMA Tyo de Baleng', 'Centre Médical d\'Arrondissement', 'PMI, entrée école normale', '08:00:00', '18:00:00', NULL, NULL, '', NULL, 'actif', '2026-06-04 11:54:36');
 
 -- --------------------------------------------------------
 
@@ -574,15 +766,40 @@ CREATE TABLE IF NOT EXISTS `sous_services` (
   KEY `idx_ss_service` (`service_id`),
   KEY `idx_ss_statut` (`statut`),
   KEY `idx_ss_qrcode` (`qr_code`(191))
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Départements médicaux (Hématologie, Oncologie…) — niveau QR Code';
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Départements médicaux (Hématologie, Oncologie…) — niveau QR Code';
 
 --
 -- Déchargement des données de la table `sous_services`
 --
 
 INSERT INTO `sous_services` (`id`, `service_id`, `nom`, `description`, `duree_rdv_defaut`, `duree_estimee`, `capacite_horaire`, `qr_code`, `qr_expire_at`, `statut`, `created_at`) VALUES
-(1, 1, 'Cardiologie', 'Pour tous les problèmes de coeur', 1800, 1800, 10, NULL, NULL, 'actif', '2026-04-30 07:09:25'),
-(2, 1, 'Pédiatrie', 'Pour les soins de santé des enfants de moins de 12 ans', 1800, 1800, 10, NULL, NULL, 'actif', '2026-04-30 07:10:24');
+(3, 1, 'Cardiologie', 'Pour tout problème lié au coeur, consultez le service de cardiologie', 1800, 1800, 10, NULL, NULL, 'actif', '2026-06-04 11:54:36'),
+(4, 1, 'Hématologie', 'Pour les problèmes liés au sang', 1800, 1800, 2, NULL, NULL, 'actif', '2026-06-16 19:27:25');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `tickets`
+--
+
+DROP TABLE IF EXISTS `tickets`;
+CREATE TABLE IF NOT EXISTS `tickets` (
+  `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `patient_id` int UNSIGNED NOT NULL,
+  `qr_code_id` int UNSIGNED NOT NULL,
+  `consultation_id` int UNSIGNED DEFAULT NULL,
+  `rang` int UNSIGNED NOT NULL,
+  `heure_creation` datetime NOT NULL,
+  `heure_debut_estimee` datetime DEFAULT NULL,
+  `heure_fin_estimee` datetime DEFAULT NULL,
+  `temps_attente_minutes` int UNSIGNED DEFAULT NULL,
+  `statut` enum('en_attente','en_cours','termine','absent','annule') COLLATE utf8mb4_unicode_ci DEFAULT 'en_attente',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `patient_id` (`patient_id`),
+  KEY `qr_code_id` (`qr_code_id`),
+  KEY `consultation_id` (`consultation_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -606,24 +823,61 @@ CREATE TABLE IF NOT EXISTS `urgences` (
 -- --------------------------------------------------------
 
 --
+-- Structure de la table `utilisateurs`
+--
+
+DROP TABLE IF EXISTS `utilisateurs`;
+CREATE TABLE IF NOT EXISTS `utilisateurs` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `email` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nom` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `mot_de_passe` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `role` enum('admin','gestionnaire','medecin') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `medecin_id` int DEFAULT NULL,
+  `gestionnaire_id` int DEFAULT NULL,
+  `statut` enum('actif','inactif') COLLATE utf8mb4_unicode_ci DEFAULT 'actif',
+  `derniere_connexion` datetime DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` int DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `email` (`email`),
+  KEY `medecin_id` (`medecin_id`),
+  KEY `gestionnaire_id` (`gestionnaire_id`),
+  KEY `idx_role` (`role`)
+) ENGINE=MyISAM AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `utilisateurs`
+--
+
+INSERT INTO `utilisateurs` (`id`, `email`, `nom`, `mot_de_passe`, `role`, `medecin_id`, `gestionnaire_id`, `statut`, `derniere_connexion`, `created_at`, `created_by`) VALUES
+(1, 'ebelemagloire@gmail.com', 'Dr Ebele Magloire', '$2y$10$81j7JUKeiB4rzCNlyy5J5ubwvbuwQR3gRf9fNP73P.5S0apOk3Nfa', 'admin', 2, NULL, 'actif', '2026-06-17 13:25:56', '2026-06-03 13:50:03', NULL),
+(2, 'mathildemoumi@gmail.com', 'MOUMI MATHILDE', '$2y$10$.2Mi3klTmw5xVzFvxU4H8.3a/r9OZeb4VmsKAY0qkhwXHCxiwHesG', 'medecin', 1, NULL, 'actif', '2026-06-17 13:21:02', '2026-06-04 10:56:31', NULL),
+(3, 'angezutchi@gmail.com', 'ange zutchi', '$2y$10$gm7ASaNRH2VuHd9MPXsN..6IrXz6j8slmMZ2dwUPr6AWK0W1vK2Au', 'gestionnaire', NULL, 1, 'actif', '2026-06-17 13:06:46', '2026-06-04 11:25:18', NULL);
+
+-- --------------------------------------------------------
+
+--
 -- Doublure de structure pour la vue `v_file_attente`
 -- (Voir ci-dessous la vue réelle)
 --
 DROP VIEW IF EXISTS `v_file_attente`;
 CREATE TABLE IF NOT EXISTS `v_file_attente` (
 `consultation_id` int unsigned
-,`rang` int unsigned
-,`statut` enum('en_attente','confirme','en_cours','traite','annule','absent')
-,`mode_prise` enum('LIGNE','PLACE','MANUEL','QR_CODE')
+,`duree_estimee_sec` int unsigned
 ,`heure_passage_estimee` datetime
+,`heure_pause` datetime
+,`medecin_nom` varchar(201)
+,`mode_prise` enum('LIGNE','PLACE','MANUEL','QR_CODE')
 ,`motif` text
+,`motif_pause` varchar(255)
 ,`patient_nom` varchar(100)
 ,`patient_prenom` varchar(100)
 ,`patient_telephone` varchar(20)
-,`sous_service_nom` varchar(200)
-,`duree_estimee_sec` int unsigned
+,`rang` int unsigned
 ,`service_nom` varchar(200)
-,`medecin_nom` varchar(201)
+,`sous_service_nom` varchar(200)
+,`statut` enum('en_attente','confirme','en_cours','en_pause','traite','annule','absent')
 );
 
 -- --------------------------------------------------------
@@ -634,19 +888,19 @@ CREATE TABLE IF NOT EXISTS `v_file_attente` (
 --
 DROP VIEW IF EXISTS `v_qrcodes_actifs`;
 CREATE TABLE IF NOT EXISTS `v_qrcodes_actifs` (
-`id` int unsigned
-,`sous_service_id` int unsigned
-,`token` varchar(255)
-,`qr_code_path` varchar(500)
-,`expire_at` datetime
-,`content` text
-,`scan_count` int unsigned
-,`statut` enum('actif','inactif','expire')
+`content` text
 ,`created_at` datetime
 ,`created_by` int unsigned
-,`sous_service_nom` varchar(200)
-,`service_nom` varchar(200)
+,`expire_at` datetime
 ,`gestionnaire_nom` varchar(150)
+,`id` int unsigned
+,`qr_code_path` varchar(500)
+,`scan_count` int unsigned
+,`service_nom` varchar(200)
+,`sous_service_id` int unsigned
+,`sous_service_nom` varchar(200)
+,`statut` enum('actif','inactif','expire')
+,`token` varchar(255)
 );
 
 -- --------------------------------------------------------
@@ -657,18 +911,18 @@ CREATE TABLE IF NOT EXISTS `v_qrcodes_actifs` (
 --
 DROP VIEW IF EXISTS `v_sous_services_complet`;
 CREATE TABLE IF NOT EXISTS `v_sous_services_complet` (
-`ss_id` int unsigned
-,`ss_nom` varchar(200)
+`capacite_horaire` int unsigned
 ,`duree_estimee` int unsigned
-,`capacite_horaire` int unsigned
-,`qr_code` varchar(500)
-,`ss_statut` enum('actif','inactif')
-,`service_id` int unsigned
-,`service_nom` varchar(200)
-,`service_adresse` varchar(300)
 ,`gestionnaire_id` int unsigned
 ,`gestionnaire_nom` varchar(150)
 ,`gestionnaire_telephone` varchar(20)
+,`qr_code` varchar(500)
+,`service_adresse` varchar(300)
+,`service_id` int unsigned
+,`service_nom` varchar(200)
+,`ss_id` int unsigned
+,`ss_nom` varchar(200)
+,`ss_statut` enum('actif','inactif')
 );
 
 -- --------------------------------------------------------
@@ -679,19 +933,19 @@ CREATE TABLE IF NOT EXISTS `v_sous_services_complet` (
 --
 DROP VIEW IF EXISTS `v_stats_jour`;
 CREATE TABLE IF NOT EXISTS `v_stats_jour` (
-`sous_service_id` int unsigned
-,`sous_service_nom` varchar(200)
-,`service_id` int unsigned
-,`service_nom` varchar(200)
-,`jour` date
-,`total_consultations` bigint
-,`traitees` decimal(23,0)
-,`en_attente` decimal(23,0)
-,`absentes` decimal(23,0)
+`absentes` decimal(23,0)
 ,`annulees` decimal(23,0)
+,`duree_reelle_moy_sec` decimal(21,0)
+,`en_attente` decimal(23,0)
+,`jour` date
 ,`prises_en_ligne` decimal(23,0)
 ,`prises_sur_place` decimal(23,0)
-,`duree_reelle_moy_sec` decimal(21,0)
+,`service_id` int unsigned
+,`service_nom` varchar(200)
+,`sous_service_id` int unsigned
+,`sous_service_nom` varchar(200)
+,`total_consultations` bigint
+,`traitees` decimal(23,0)
 );
 
 -- --------------------------------------------------------
@@ -702,7 +956,7 @@ CREATE TABLE IF NOT EXISTS `v_stats_jour` (
 DROP TABLE IF EXISTS `v_file_attente`;
 
 DROP VIEW IF EXISTS `v_file_attente`;
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_file_attente`  AS SELECT `c`.`id` AS `consultation_id`, `c`.`rang` AS `rang`, `c`.`statut` AS `statut`, `c`.`mode_prise` AS `mode_prise`, `c`.`heure_passage_estimee` AS `heure_passage_estimee`, `c`.`motif` AS `motif`, `p`.`nom` AS `patient_nom`, `p`.`prenom` AS `patient_prenom`, `p`.`telephone` AS `patient_telephone`, `ss`.`nom` AS `sous_service_nom`, `ss`.`duree_estimee` AS `duree_estimee_sec`, `s`.`nom` AS `service_nom`, concat(`m`.`prenom`,' ',`m`.`nom`) AS `medecin_nom` FROM ((((`consultations` `c` join `patients` `p` on((`p`.`id` = `c`.`patient_id`))) join `sous_services` `ss` on((`ss`.`id` = `c`.`sous_service_id`))) join `services` `s` on((`s`.`id` = `ss`.`service_id`))) left join `medecins` `m` on((`m`.`id` = `c`.`medecin_id`))) WHERE ((`c`.`statut` in ('en_attente','confirme','en_cours')) AND (cast(`c`.`heure_emission` as date) = curdate())) ORDER BY `ss`.`id` ASC, `c`.`rang` ASC  ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_file_attente`  AS SELECT `c`.`id` AS `consultation_id`, `c`.`rang` AS `rang`, `c`.`statut` AS `statut`, `c`.`mode_prise` AS `mode_prise`, `c`.`heure_passage_estimee` AS `heure_passage_estimee`, `c`.`heure_pause` AS `heure_pause`, `c`.`motif_pause` AS `motif_pause`, `c`.`motif` AS `motif`, `p`.`nom` AS `patient_nom`, `p`.`prenom` AS `patient_prenom`, `p`.`telephone` AS `patient_telephone`, `ss`.`nom` AS `sous_service_nom`, `ss`.`duree_estimee` AS `duree_estimee_sec`, `s`.`nom` AS `service_nom`, concat(`m`.`prenom`,' ',`m`.`nom`) AS `medecin_nom` FROM ((((`consultations` `c` join `patients` `p` on((`p`.`id` = `c`.`patient_id`))) join `sous_services` `ss` on((`ss`.`id` = `c`.`sous_service_id`))) join `services` `s` on((`s`.`id` = `ss`.`service_id`))) left join `medecins` `m` on((`m`.`id` = `c`.`medecin_id`))) WHERE ((`c`.`statut` in ('en_attente','confirme','en_cours','en_pause')) AND (cast(`c`.`heure_emission` as date) = curdate())) ORDER BY `ss`.`id` ASC, `c`.`rang` ASC  ;
 
 -- --------------------------------------------------------
 
@@ -776,10 +1030,10 @@ ALTER TABLE `logs_estimation`
   ADD CONSTRAINT `fk_logs_ss` FOREIGN KEY (`sous_service_id`) REFERENCES `sous_services` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
--- Contraintes pour la table `medecins`
+-- Contraintes pour la table `medecin_jours_travail`
 --
-ALTER TABLE `medecins`
-  ADD CONSTRAINT `fk_medecins_service` FOREIGN KEY (`service_id`) REFERENCES `services` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `medecin_jours_travail`
+  ADD CONSTRAINT `medecin_jours_travail_ibfk_1` FOREIGN KEY (`medecin_id`) REFERENCES `medecins` (`id`) ON DELETE CASCADE;
 
 --
 -- Contraintes pour la table `medecin_sous_service`
@@ -816,6 +1070,14 @@ ALTER TABLE `sous_services`
   ADD CONSTRAINT `fk_ss_service` FOREIGN KEY (`service_id`) REFERENCES `services` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
+-- Contraintes pour la table `tickets`
+--
+ALTER TABLE `tickets`
+  ADD CONSTRAINT `tickets_ibfk_1` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `tickets_ibfk_2` FOREIGN KEY (`qr_code_id`) REFERENCES `qr_codes` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `tickets_ibfk_3` FOREIGN KEY (`consultation_id`) REFERENCES `consultations` (`id`) ON DELETE SET NULL;
+
+--
 -- Contraintes pour la table `urgences`
 --
 ALTER TABLE `urgences`
@@ -831,6 +1093,38 @@ CREATE DEFINER=`root`@`localhost` EVENT `event_expire_qrcodes` ON SCHEDULE EVERY
     SET statut = 'expire' 
     WHERE expire_at <= NOW() 
       AND statut = 'actif';
+END$$
+
+DROP EVENT IF EXISTS `event_absence_auto`$$
+CREATE DEFINER=`root`@`localhost` EVENT `event_absence_auto` ON SCHEDULE EVERY 1 MINUTE STARTS '2026-06-08 11:05:50' ON COMPLETION PRESERVE ENABLE DO BEGIN
+
+  -- Cas 1 : patient en_attente ou confirme non démarré
+  --         10 minutes après la fin de la consultation précédente → absent
+  UPDATE consultations c
+  JOIN (
+    SELECT sous_service_id, medecin_id, MAX(heure_fin_reelle) AS derniere_fin
+    FROM consultations
+    WHERE statut = 'traite'
+      AND CAST(heure_emission AS DATE) = CURDATE()
+      AND heure_fin_reelle IS NOT NULL
+    GROUP BY sous_service_id, medecin_id
+  ) fin
+    ON  fin.sous_service_id = c.sous_service_id
+    AND fin.medecin_id      = c.medecin_id
+  SET c.statut = 'absent'
+  WHERE c.statut IN ('en_attente', 'confirme')
+    AND CAST(c.heure_emission AS DATE) = CURDATE()
+    AND c.heure_debut_reelle IS NULL
+    AND fin.derniere_fin IS NOT NULL
+    AND TIMESTAMPDIFF(MINUTE, fin.derniere_fin, NOW()) >= 10;
+
+  -- Cas 2 : patient en_pause depuis plus de 30 minutes → absent
+  UPDATE consultations
+  SET statut = 'absent'
+  WHERE statut = 'en_pause'
+    AND heure_pause IS NOT NULL
+    AND TIMESTAMPDIFF(MINUTE, heure_pause, NOW()) >= 30;
+
 END$$
 
 DELIMITER ;
