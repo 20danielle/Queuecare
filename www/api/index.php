@@ -43,6 +43,9 @@ try {
         require __DIR__ . '/services/sous_services.php';
     } elseif ($uri === '/consultations' && $method === 'GET') {
         require __DIR__ . '/consultations/history.php';
+    } elseif (preg_match('#^/consultations/creneaux-disponibles/(\d+)$#', $uri, $m) && $method === 'GET') {
+        $_GET['sub_service_id'] = $m[1];
+        require __DIR__ . '/consultations/creneaux_disponibles.php';
     } elseif ($uri === '/consultations/scanner-qr' && $method === 'POST') {
         require __DIR__ . '/consultations/scan_qr.php';
     } elseif ($uri === '/consultations/rdv-distance' && $method === 'POST') {
