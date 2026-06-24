@@ -19,7 +19,7 @@ if (!$patient) {
 }
 
 $otp     = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-$expires = date('Y-m-d H:i:s', time() + 900); // 15 min
+$expires = date('Y-m-d H:i:s', time() + 600); // 10 min
 
 // Stocker dans une table temporaire (créée si elle n'existe pas)
 $db->exec("CREATE TABLE IF NOT EXISTS password_resets (
@@ -27,13 +27,14 @@ $db->exec("CREATE TABLE IF NOT EXISTS password_resets (
     patient_id INT UNSIGNED NOT NULL,
     otp_code VARCHAR(10) NOT NULL,
     expires_at DATETIME NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_password_resets_patient (patient_id),
+    KEY idx_password_resets_expires_at (expires_at)
 ) ENGINE=InnoDB");
 
-$db->prepare("DELETE FROM password_resets WHERE patient_id = ?")
-   ->execute([$patient['id']]);
-
-$db->prepare("INSERT INTO password_resets (patient_id, otp_code, expires_at) VALUES (?, ?, ?)")
+$db->prepare("INSERT INTO password_resets (patient_id, otp_code, expires_at)
+              VALUES (?, ?, ?)
+              ON DUPLICATE KEY UPDATE otp_code = VALUES(otp_code), expires_at = VALUES(expires_at), created_at = CURRENT_TIMESTAMP")
    ->execute([$patient['id'], $otp, $expires]);
 
 $emailSent = false;

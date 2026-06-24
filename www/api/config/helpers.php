@@ -58,7 +58,7 @@ function sendOtpEmail(string $toEmail, string $toName, string $otpCode): bool {
     $subject   = 'Code OTP QueueCare';
     $message   = "Bonjour {$toName},\n\n"
         . "Votre code OTP QueueCare est : {$otpCode}\n"
-        . "Il expire dans 15 minutes.\n\n"
+        . "Il expire dans 10 minutes.\n\n"
         . "Si vous n'etes pas a l'origine de cette demande, ignorez ce message.\n";
 
     $smtpHost = defined('SMTP_HOST') ? SMTP_HOST : '';
