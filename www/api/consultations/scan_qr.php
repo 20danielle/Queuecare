@@ -77,6 +77,32 @@ if ($stmt->fetch()) {
     jsonError('Vous avez deja un ticket actif pour ce service aujourd\'hui', 'DUPLICATE_TICKET', 409);
 }
 
+// 3. Choisir le médecin le moins occupé du sous-service pour aujourd'hui
+$stmt = $db->prepare(
+    'SELECT m.id,
+            COALESCE(occ.nb, 0) AS nb_consultations
+     FROM medecins m
+     JOIN medecin_sous_service mss ON mss.medecin_id = m.id
+     LEFT JOIN (
+         SELECT medecin_id, COUNT(*) AS nb
+         FROM consultations
+         WHERE sous_service_id = :ss
+           AND DATE(COALESCE(heure_passage_estimee, heure_emission)) = CURDATE()
+           AND medecin_id IS NOT NULL
+           AND statut IN ("en_attente","confirme","en_cours","en_pause")
+         GROUP BY medecin_id
+     ) occ ON occ.medecin_id = m.id
+     WHERE mss.sous_service_id = :ss2
+       AND m.statut = "disponible"
+     ORDER BY COALESCE(occ.nb, 0) ASC, m.id ASC
+     LIMIT 1'
+);
+$stmt->execute([
+    ':ss' => $qr['sous_service_id'],
+    ':ss2' => $qr['sous_service_id'],
+]);
+$medecinId = (int)($stmt->fetchColumn() ?: 0);
+
 // 3. Calculer le rang (nombre de tickets actifs aujourd'hui)
 $stmt = $db->prepare(
     "SELECT COUNT(*) AS nb FROM consultations
@@ -96,13 +122,14 @@ $heurePassage = date('Y-m-d H:i:s', time() + $tempsAttenteSecondes);
 // 5. Creer la consultation
 $stmt = $db->prepare(
     "INSERT INTO consultations
-       (patient_id, sous_service_id, qr_code_id, statut, rang,
+       (patient_id, sous_service_id, medecin_id, qr_code_id, statut, rang,
         mode_prise, heure_emission, heure_passage_estimee, duree_estimee, motif)
-     VALUES (?, ?, ?, 'en_attente', ?, 'QR_CODE', NOW(), ?, ?, ?)"
+     VALUES (?, ?, ?, ?, 'en_attente', ?, 'QR_CODE', NOW(), ?, ?, ?)"
 );
 $stmt->execute([
     $auth['sub'],
     $qr['sous_service_id'],
+    $medecinId ?: null,
     $qr['qr_id'],
     $rang,
     $heurePassage,

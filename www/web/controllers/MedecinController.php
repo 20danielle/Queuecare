@@ -245,6 +245,7 @@ class MedecinController
 
         if ($affectation) {
             $ssId = (int)$affectation['ss_id'];
+            $this->model->affecterConsultationsSansMedecinDuJour($ssId);
             $stats = $this->model->statsJour($ssId);
             $consultations = $this->model->consultationsDuJour($ssId, $medecinId);
             $planning = $this->model->planningMedecin($medecinId);
@@ -287,6 +288,7 @@ class MedecinController
         }
 
         $ssId = $affectation['ss_id'];
+        $this->model->affecterConsultationsSansMedecinDuJour($ssId);
 
         $consultations = $this->model->consultationsDuJour($ssId, $medecinId);
         $stats         = $this->model->statsJour($ssId);
@@ -464,6 +466,13 @@ class MedecinController
         $date = $_GET['date'] ?? date('Y-m-d');
         $startDate = date('Y-m-d', strtotime($date));
         $endDate = date('Y-m-d', strtotime($date . ' +6 days'));
+
+        $dateCourante = new DateTimeImmutable($startDate);
+        $dateLimite = new DateTimeImmutable($endDate);
+        while ($dateCourante <= $dateLimite) {
+            $this->model->affecterConsultationsSansMedecinDuJour($ssId, $dateCourante->format('Y-m-d'));
+            $dateCourante = $dateCourante->modify('+1 day');
+        }
 
         $consultationsData = $this->model->getConsultationsParPeriode($ssId, $medecinId, $startDate, $endDate);
         

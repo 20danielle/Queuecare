@@ -96,6 +96,90 @@ class MedecinModel
     }
 
     /**
+     * Sélectionne le médecin le moins chargé pour un sous-service et une date donnée.
+     * Sert de règle commune pour les consultations créées via QR, web ou rendez-vous.
+     */
+    public function choisirMedecinMoinsOccupe(int $ssId, string $date): int
+    {
+        $stmt = $this->db->prepare(
+            'SELECT m.id,
+                    COALESCE(occ.nb, 0) AS nb_consultations
+             FROM medecins m
+             JOIN medecin_sous_service mss ON mss.medecin_id = m.id
+             LEFT JOIN (
+                 SELECT medecin_id, COUNT(*) AS nb
+                 FROM consultations
+                 WHERE sous_service_id = :ss1
+                   AND DATE(COALESCE(heure_passage_estimee, heure_emission)) = :date
+                   AND medecin_id IS NOT NULL
+                   AND statut IN ("en_attente","confirme","en_cours","en_pause")
+                 GROUP BY medecin_id
+             ) occ ON occ.medecin_id = m.id
+             WHERE mss.sous_service_id = :ss2
+               AND m.statut = "disponible"
+             ORDER BY COALESCE(occ.nb, 0) ASC, m.id ASC
+             LIMIT 1'
+        );
+        $stmt->execute([
+            ':ss1' => $ssId,
+            ':ss2' => $ssId,
+            ':date' => $date,
+        ]);
+        $row = $stmt->fetch();
+        return $row ? (int)$row['id'] : 0;
+    }
+
+    /**
+     * Affecte automatiquement les consultations du jour sans médecin à un médecin disponible.
+     * Utile pour rattraper les tickets créés avant l'unification du flux.
+     */
+    public function affecterConsultationsSansMedecinDuJour(int $ssId, ?string $date = null): int
+    {
+        $date = $date ?: date('Y-m-d');
+
+        $stmt = $this->db->prepare(
+            'SELECT id
+             FROM consultations
+             WHERE sous_service_id = :ss
+               AND medecin_id IS NULL
+               AND DATE(COALESCE(heure_passage_estimee, heure_emission)) = :date
+               AND statut IN ("en_attente","confirme","en_cours","en_pause")
+             ORDER BY heure_emission ASC, id ASC'
+        );
+        $stmt->execute([
+            ':ss' => $ssId,
+            ':date' => $date,
+        ]);
+
+        $ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        if (!$ids) {
+            return 0;
+        }
+
+        $assigned = 0;
+        foreach ($ids as $consultationId) {
+            $medecinId = $this->choisirMedecinMoinsOccupe($ssId, $date);
+            if (!$medecinId) {
+                break;
+            }
+
+            $upd = $this->db->prepare(
+                'UPDATE consultations SET medecin_id = :mid WHERE id = :id AND medecin_id IS NULL'
+            );
+            $upd->execute([
+                ':mid' => $medecinId,
+                ':id' => (int)$consultationId,
+            ]);
+
+            if ($upd->rowCount() > 0) {
+                $assigned++;
+            }
+        }
+
+        return $assigned;
+    }
+
+    /**
      * Horaires du service associé à un sous-service (identique à GestionnaireModel)
      */
     public function getServiceHoraires(int $ssId): array
