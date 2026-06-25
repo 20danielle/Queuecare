@@ -5,6 +5,7 @@
  */
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/NotificationModel.php';
 
 class MedecinModel
 {
@@ -274,13 +275,13 @@ class MedecinModel
         }
 
         $stmt = $this->db->prepare(
-            'SELECT c.id, c.rang, c.statut, c.mode_prise,
+            'SELECT c.id, c.patient_id, c.rang, c.statut, c.mode_prise,
                     c.heure_passage_estimee, c.heure_debut_reelle, c.heure_fin_reelle, c.motif,
                     c.heure_pause, c.motif_pause, c.priorite_retour,
                     CASE WHEN c.statut = "en_pause" AND c.heure_pause IS NOT NULL
                          THEN TIMESTAMPDIFF(SECOND, c.heure_pause, NOW())
                          ELSE 0 END AS secondes_en_pause,
-                    p.nom AS patient_nom, p.prenom AS patient_prenom, p.telephone
+                    p.nom AS patient_nom, p.prenom AS patient_prenom, p.telephone, p.token_fcm
              FROM consultations c
              JOIN patients p ON p.id = c.patient_id
              WHERE c.sous_service_id = :ss
@@ -302,9 +303,9 @@ class MedecinModel
     public function getConsultationsParPeriode(int $ssId, int $medecinId, string $dateDebut, string $dateFin): array
     {
         $stmt = $this->db->prepare(
-            'SELECT c.id, c.rang, c.statut, c.mode_prise, c.duree_estimee,
+            'SELECT c.id, c.patient_id, c.rang, c.statut, c.mode_prise, c.duree_estimee,
                     c.heure_passage_estimee, c.heure_debut_reelle, c.heure_fin_reelle, c.motif,
-                    p.nom AS patient_nom, p.prenom AS patient_prenom, p.telephone
+                    p.nom AS patient_nom, p.prenom AS patient_prenom, p.telephone, p.token_fcm
              FROM consultations c
              JOIN patients p ON p.id = c.patient_id
              WHERE c.sous_service_id = :ss
@@ -483,11 +484,14 @@ class MedecinModel
     {
         try {
             $this->db->beginTransaction();
+            $notificationsAEnvoyer = [];
 
             // 1. Récupérer les consultations actives du jour, dans l'ordre
             $stmt = $this->db->prepare(
-                'SELECT id, rang, heure_passage_estimee, duree_estimee
-                 FROM consultations
+                'SELECT c.id, c.patient_id, c.rang, c.heure_passage_estimee, c.duree_estimee,
+                        p.token_fcm
+                 FROM consultations c
+                 JOIN patients p ON p.id = c.patient_id
                  WHERE medecin_id = :mid
                    AND DATE(COALESCE(heure_passage_estimee, heure_emission)) = CURDATE()
                    AND statut NOT IN ("traite", "annule", "absent")
@@ -553,9 +557,30 @@ class MedecinModel
                     ':nouvelle_heure' => $nouvelleHeure,
                     ':id'             => $c['id'],
                 ]);
+
+                $notificationsAEnvoyer[] = [
+                    'patient_id' => (int)$c['patient_id'],
+                    'consultation_id' => (int)$c['id'],
+                    'token_fcm'  => $c['token_fcm'] ?? null,
+                    'type'       => 'DECALAGE',
+                    'contenu'    => sprintf(
+                        'Votre rendez-vous a été reporté au %s à %s.',
+                        date('d/m/Y', strtotime($nouvelleHeure)),
+                        date('H:i', strtotime($nouvelleHeure))
+                    ),
+                ];
             }
 
             $this->db->commit();
+            foreach ($notificationsAEnvoyer as $notification) {
+                $this->notifierPatient(
+                    $notification['patient_id'],
+                    $notification['type'],
+                    $notification['contenu'],
+                    $notification['consultation_id'],
+                    $notification['token_fcm']
+                );
+            }
             return true;
 
         } catch (\PDOException $e) {
@@ -819,7 +844,7 @@ class MedecinModel
 
         // 1. Récupérer la consultation source
         $stmt = $this->db->prepare(
-            'SELECT c.*, p.nom AS patient_nom, p.prenom AS patient_prenom
+            'SELECT c.*, p.nom AS patient_nom, p.prenom AS patient_prenom, p.token_fcm
              FROM consultations c
              JOIN patients p ON p.id = c.patient_id
              WHERE c.id = :id'
@@ -903,6 +928,18 @@ class MedecinModel
             $heureRdvPourEdt
         );
 
+        $this->notifierPatient(
+            (int)$source['patient_id'],
+            'CONFIRMATION',
+            sprintf(
+                'Votre prochain rendez-vous est fixé au %s à %s.',
+                date('d/m/Y', strtotime($dateRdv)),
+                $heureRdv
+            ),
+            $rdvId,
+            $source['token_fcm'] ?? null
+        );
+
         return [
             'success'     => true,
             'rdv_id'      => $rdvId,
@@ -911,6 +948,102 @@ class MedecinModel
             'date_rdv'    => $dateRdv,
             'heure_rdv'   => $heureRdv,
         ];
+    }
+
+    /**
+     * Notifie un patient via la base de notifications et FCM.
+     */
+    private function notifierPatient(
+        int $patientId,
+        string $type,
+        string $contenu,
+        ?int $consultationId = null,
+        ?string $tokenFcm = null
+    ): array {
+        if ($patientId <= 0) {
+            return ['success' => false, 'message' => 'Patient invalide'];
+        }
+
+        $notificationModel = new NotificationModel();
+        return $notificationModel->enregistrerEtEnvoyer(
+            $patientId,
+            $type,
+            $contenu,
+            $consultationId,
+            $tokenFcm
+        );
+    }
+
+    /**
+     * Notifie les patients encore en attente après la fin d'une consultation.
+     */
+    public function notifierPatientsSuivantsApresTerminaison(int $medecinId, int $consultationTermineeId): int
+    {
+        $affectation = $this->getSousServiceMedecin($medecinId);
+        if (!$affectation) {
+            return 0;
+        }
+
+        $consultations = $this->consultationsDuJour((int)$affectation['ss_id'], $medecinId);
+        $envoyees = 0;
+
+        foreach ($consultations as $consultation) {
+            if ((int)$consultation['id'] === $consultationTermineeId) {
+                continue;
+            }
+
+            if (!in_array($consultation['statut'], ['en_attente', 'confirme'], true)) {
+                continue;
+            }
+
+            $message = sprintf(
+                'La consultation précédente vient de se terminer. Si vous êtes le prochain patient, préparez-vous pour un passage estimé à %s.',
+                !empty($consultation['heure_passage_estimee'])
+                    ? date('H:i', strtotime($consultation['heure_passage_estimee']))
+                    : 'bientôt'
+            );
+
+            $result = $this->notifierPatient(
+                (int)$consultation['patient_id'],
+                'AVANCEMENT',
+                $message,
+                (int)$consultation['id'],
+                $consultation['token_fcm'] ?? null
+            );
+
+            if (!empty($result['success'])) {
+                $envoyees++;
+            }
+        }
+
+        return $envoyees;
+    }
+
+    /**
+     * Notifie le patient dont la consultation vient d'être terminée.
+     */
+    public function notifierConsultationTerminee(int $consultationId): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT c.id, c.patient_id, p.token_fcm
+             FROM consultations c
+             JOIN patients p ON p.id = c.patient_id
+             WHERE c.id = :id'
+        );
+        $stmt->execute([':id' => $consultationId]);
+        $consultation = $stmt->fetch();
+
+        if (!$consultation) {
+            return ['success' => false, 'message' => 'Consultation introuvable'];
+        }
+
+        return $this->notifierPatient(
+            (int)$consultation['patient_id'],
+            'INFO',
+            'Votre consultation est terminée. Merci de rester attentif aux prochaines notifications.',
+            (int)$consultation['id'],
+            $consultation['token_fcm'] ?? null
+        );
     }
 
     /**

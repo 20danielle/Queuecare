@@ -403,6 +403,11 @@ class MedecinController
 
         $consultationId = (int)($_POST['consultation_id'] ?? 0);
         if ($consultationId && $this->model->terminerConsultation($consultationId)) {
+            $medecinId = (int)($_SESSION['medecin_id'] ?? 0);
+            if ($medecinId > 0) {
+                $this->model->notifierConsultationTerminee($consultationId);
+                $this->model->notifierPatientsSuivantsApresTerminaison($medecinId, $consultationId);
+            }
             echo json_encode(['success' => true, 'message' => 'Consultation terminée']);
         } else {
             echo json_encode(['success' => false, 'message' => 'Impossible de terminer cette consultation']);

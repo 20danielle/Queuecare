@@ -358,7 +358,7 @@ class NotificationHelper
     {
         $medecinName = $consultation['medecin_nom'] ?? 'le medecin';
 
-        return $this->sendToDevice($token, 'Vous etes appele(e)', "{$medecinName} est pret(e) a vous recevoir.", [
+        return $this->sendToDevice($token, 'C’est votre tour', "Votre passage est imminent. {$medecinName} est pret(e) a vous recevoir.", [
             'type' => 'patient_called',
             'consultation_id' => $consultation['id'] ?? 0,
             'url' => '/patient/consultation.php?id=' . ($consultation['id'] ?? 0),
@@ -383,7 +383,7 @@ class NotificationHelper
         $heure = date('H:i', strtotime($consultation['heure_passage_estimee'] ?? '09:00'));
         $sousService = $consultation['sous_service_nom'] ?? 'consultation';
 
-        return $this->sendToDevice($token, 'Rendez-vous confirme', "Votre {$sousService} est confirmee pour le {$date} a {$heure}.", [
+        return $this->sendToDevice($token, 'Rendez-vous confirmé', "Votre {$sousService} est confirmé pour le {$date} à {$heure}.", [
             'type' => 'appointment_confirmed',
             'consultation_id' => $consultation['id'] ?? 0,
             'url' => '/patient/dashboard.php',
@@ -408,9 +408,9 @@ class NotificationHelper
     {
         $newDate = date('d/m/Y', strtotime($consultation['heure_passage_estimee'] ?? 'now'));
         $newTime = date('H:i', strtotime($consultation['heure_passage_estimee'] ?? '09:00'));
-        $message = "Votre consultation a ete modifiee. Nouveau creneau: {$newDate} a {$newTime}.";
+        $message = "Votre consultation a été modifiée. Nouveau créneau : {$newDate} à {$newTime}.";
 
-        return $this->sendToDevice($token, 'Consultation modifiee', $message, [
+        return $this->sendToDevice($token, 'Horaire mis à jour', $message, [
             'type' => 'appointment_updated',
             'consultation_id' => $consultation['id'] ?? 0,
             'url' => '/patient/dashboard.php',
