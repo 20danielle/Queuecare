@@ -7,6 +7,8 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 
 require_once __DIR__ . '/helpers/AuthHelper.php';
 require_once __DIR__ . '/config/app.php';
+require_once __DIR__ . '/helpers/LangHelper.php';
+LangHelper::init();
 
 if (!AuthHelper::estAdmin()) {
     header('Location: index.php?action=login&error=acces_refuse');
@@ -34,6 +36,7 @@ $allowedActions = [
     // Profil admin
     'verifier_mdp_admin',
     'modifier_profil_admin',
+    'changer_langue_admin',
     // Statistiques
     'get_stats_admin',
     'get_temps_attente_admin',
@@ -67,6 +70,7 @@ switch ($action) {
     case 'sauvegarder_planning_gestionnaire': $ctrl->sauvegarderPlanningGestionnaire(); break;
     case 'verifier_mdp_admin':           $ctrl->verifierMdpAdmin(); break;
     case 'modifier_profil_admin':        $ctrl->modifierProfilAdmin(); break;
+    case 'changer_langue_admin':         $ctrl->changerLangueAdmin(); break;
     case 'get_stats_admin':              $ctrl->getStatsAdmin(); break;
     case 'get_temps_attente_admin':      $ctrl->getTempsAttenteAdmin(); break;
     case 'consultations_medecin':          $ctrl->afficherConsultationsAdmin(); break;

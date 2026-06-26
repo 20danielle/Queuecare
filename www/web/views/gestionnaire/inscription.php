@@ -198,6 +198,20 @@
                     </div>
                 </div>
                 
+                <!-- Langue préférée -->
+                <div class="medical-field" style="margin-bottom:16px">
+                    <label class="medical-label" for="langue">
+                        <i class="fa-solid fa-language"></i> Langue préférée / Preferred language *
+                    </label>
+                    <div class="medical-input-wrapper">
+                        <span class="medical-input-icon"><i class="fa-solid fa-globe"></i></span>
+                        <select id="langue" name="langue" class="medical-input" style="padding-left:40px">
+                            <option value="fr" <?= ($anciens['langue'] ?? 'fr') === 'fr' ? 'selected' : '' ?>>🇫🇷 Français</option>
+                            <option value="en" <?= ($anciens['langue'] ?? '') === 'en' ? 'selected' : '' ?>>🇬🇧 English</option>
+                        </select>
+                    </div>
+                </div>
+
                 <!-- Bouton d'inscription -->
                 <button type="submit" class="medical-btn" id="submitBtn">
                     <i class="fa-solid fa-user-plus"></i> Créer mon compte

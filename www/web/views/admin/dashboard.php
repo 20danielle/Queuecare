@@ -154,6 +154,28 @@ $nbActifsSS = count(array_filter($sousServices, fn($s) => $s['statut'] === 'acti
         </div>
       </div>
       <div class="adm-topbar-right">
+        <!-- Sélecteur de langue -->
+        <?php $currentLang = \LangHelper::getLang(); ?>
+        <div style="display:flex;align-items:center;background:#f1f5f9;border-radius:10px;padding:3px;gap:2px;margin-right:14px;border:1px solid #e2e8f0">
+          <button type="button" onclick="adminChangerLangue('fr')" title="Français"
+                  style="display:flex;align-items:center;gap:5px;padding:5px 12px;border:none;border-radius:7px;font-size:.8rem;
+                         cursor:pointer;font-family:inherit;transition:all .2s;
+                         background:<?= $currentLang==='fr'?'#fff':'transparent' ?>;
+                         color:<?= $currentLang==='fr'?'#1e40af':'#64748b' ?>;
+                         font-weight:<?= $currentLang==='fr'?'700':'500' ?>;
+                         box-shadow:<?= $currentLang==='fr'?'0 1px 4px rgba(0,0,0,.12)':'none' ?>">
+            🇫🇷 <span>FR</span>
+          </button>
+          <button type="button" onclick="adminChangerLangue('en')" title="English"
+                  style="display:flex;align-items:center;gap:5px;padding:5px 12px;border:none;border-radius:7px;font-size:.8rem;
+                         cursor:pointer;font-family:inherit;transition:all .2s;
+                         background:<?= $currentLang==='en'?'#fff':'transparent' ?>;
+                         color:<?= $currentLang==='en'?'#1e40af':'#64748b' ?>;
+                         font-weight:<?= $currentLang==='en'?'700':'500' ?>;
+                         box-shadow:<?= $currentLang==='en'?'0 1px 4px rgba(0,0,0,.12)':'none' ?>">
+            🇬🇧 <span>EN</span>
+          </button>
+        </div>
         <div class="adm-user-badge">
           <i class="fas fa-user-shield"></i>
           <span><?= htmlspecialchars($nomAdmin) ?></span>
@@ -861,6 +883,18 @@ function confirmDelete(id, nom) {
 // ── Auto-dismiss setup banner ──
 const banner = document.getElementById('setupBanner');
 if (banner) setTimeout(() => banner.style.display = 'none', 6000);
+
+// ── Changement de langue admin ──
+async function adminChangerLangue(langue) {
+  const fd = new FormData();
+  fd.append('langue', langue);
+  const res = await fetch('admin.php?action=changer_langue_admin', {method:'POST', body:fd});
+  const d = await res.json();
+  if (d.success) {
+    // Rechargement pour appliquer la nouvelle langue
+    window.location.reload();
+  }
+}
 </script>
 </body>
 </html>

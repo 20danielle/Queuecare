@@ -6,7 +6,10 @@
  * ACCÈS : Médecins et Administrateurs (Directeur)
  */
 
+session_start();
 require_once __DIR__ . '/helpers/AuthHelper.php';
+require_once __DIR__ . '/helpers/LangHelper.php';
+LangHelper::init();
 
 // L'inscription est publique : pas de vérification d'accès
 $action = $_GET['action'] ?? 'dashboard';
@@ -50,6 +53,8 @@ $allowedActions = [
     // Temps d'attente moyen
     'get_temps_attente_evolution',
     'get_dashboard_medecin_data',
+    // Langue
+    'changer_langue',
 ];
 
 if (!in_array($action, $allowedActions)) {
@@ -167,6 +172,10 @@ switch ($action) {
 
     case 'get_dashboard_medecin_data':
         $ctrl->getDashboardMedecinData();
+        break;
+
+    case 'changer_langue':
+        $ctrl->changerLangue();
         break;
 
     default:

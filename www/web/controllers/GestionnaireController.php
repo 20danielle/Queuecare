@@ -8,6 +8,7 @@ require_once __DIR__ . '/../models/GestionnaireModel.php';
 require_once __DIR__ . '/../models/UtilisateurModel.php';
 require_once __DIR__ . '/../helpers/AuthHelper.php';
 require_once __DIR__ . '/../helpers/QueueNotificationService.php';
+require_once __DIR__ . '/../helpers/LangHelper.php';
 
 class GestionnaireController
 {
@@ -68,12 +69,14 @@ class GestionnaireController
         $password      = $_POST['password']               ?? '';
         $confirm       = $_POST['confirm']                ?? '';
         $sousServiceId = (int)($_POST['sous_service_id']  ?? 0);
+        $langue        = in_array($_POST['langue'] ?? '', ['fr','en']) ? $_POST['langue'] : 'fr';
 
         $anciens = [
             'nom'             => $nom,
             'telephone'       => $telephone,
             'email'           => $email,
             'sous_service_id' => $sousServiceId,
+            'langue'          => $langue,
         ];
 
         if (mb_strlen($nom) < 2) {
@@ -125,6 +128,7 @@ class GestionnaireController
             'email'           => $email,
             'password'        => $hashedPassword,  // ← Mot de passe hashé
             'sous_service_id' => $sousServiceId,
+            'langue'          => $langue,
         ]);
 
         if (!$gestionnaireId) {
@@ -219,6 +223,10 @@ class GestionnaireController
         if ($sousService) {
             $_SESSION['sous_service_id'] = $sousService['id'];
         }
+
+        // Restaurer la langue préférée du gestionnaire
+        $gestionnaireData = $this->model->trouverParId((int)$user['gestionnaire_id']);
+        LangHelper::setLang($gestionnaireData['langue'] ?? 'fr');
 
         header('Location: gestionnaire.php?action=dashboard');
         exit;
@@ -620,6 +628,21 @@ class GestionnaireController
         $_SESSION['user_nom'] = $nom;
 
         echo json_encode(['success' => true, 'message' => 'Profil mis à jour avec succès.']);
+        exit;
+    }
+
+    public function changerLangue(): void
+    {
+        header('Content-Type: application/json');
+        if (!AuthHelper::estGestionnaire()) {
+            echo json_encode(['success' => false, 'message' => 'Non authentifié']);
+            exit;
+        }
+        $langue = $_POST['langue'] ?? 'fr';
+        $id = (int)$_SESSION['gestionnaire_id'];
+        $this->model->mettreAJourLangue($id, $langue);
+        LangHelper::setLang($langue);
+        echo json_encode(['success' => true, 'langue' => LangHelper::getLang()]);
         exit;
     }
 

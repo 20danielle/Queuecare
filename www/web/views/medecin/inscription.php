@@ -256,6 +256,21 @@
                     <?php endif; ?>
                 </div>
                 
+                <!-- Langue préférée -->
+                <div class="med-field">
+                    <label class="med-label" for="langue">
+                        <i class="fa-solid fa-language"></i> Langue préférée / Preferred language *
+                    </label>
+                    <div class="med-input-wrapper">
+                        <span class="med-input-icon"><i class="fa-solid fa-globe"></i></span>
+                        <select id="langue" name="langue" class="med-input med-select">
+                            <option value="fr" <?= ($anciens['langue'] ?? 'fr') === 'fr' ? 'selected' : '' ?>>🇫🇷 Français</option>
+                            <option value="en" <?= ($anciens['langue'] ?? '') === 'en' ? 'selected' : '' ?>>🇬🇧 English</option>
+                        </select>
+                        <span class="med-select-arrow"><i class="fa-solid fa-chevron-down"></i></span>
+                    </div>
+                </div>
+
                 <button type="submit" class="med-btn" id="submitBtn">
                     <i class="fa-solid fa-user-plus"></i> Créer mon compte
                 </button>

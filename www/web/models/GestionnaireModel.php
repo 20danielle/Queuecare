@@ -36,8 +36,8 @@ class GestionnaireModel
     public function creer(array $d): int|false
     {
         $stmt = $this->db->prepare(
-            'INSERT INTO gestionnaires (nom, telephone, email, password, sous_service_id)
-             VALUES (:nom, :telephone, :email, :password, :sous_service_id)'
+            'INSERT INTO gestionnaires (nom, telephone, email, password, sous_service_id, langue)
+             VALUES (:nom, :telephone, :email, :password, :sous_service_id, :langue)'
         );
         $ok = $stmt->execute([
             ':nom'             => htmlspecialchars(trim($d['nom'])),
@@ -45,12 +45,20 @@ class GestionnaireModel
             ':email'           => strtolower(trim($d['email'])),
             ':password'        => password_hash($d['password'], PASSWORD_BCRYPT, ['cost' => 12]),
             ':sous_service_id' => (int)$d['sous_service_id'],
+            ':langue'          => in_array($d['langue'] ?? '', ['fr','en']) ? $d['langue'] : 'fr',
         ]);
         // ⚠️ IMPORTANT : on retourne l'ID réellement inséré (lastInsertId),
         // pas le booléen de execute(), sinon tous les nouveaux gestionnaires
         // se retrouvent associés à l'ID 1 (true => (int)1) et héritent
         // des données du premier gestionnaire créé.
         return $ok ? (int)$this->db->lastInsertId() : false;
+    }
+
+    public function mettreAJourLangue(int $id, string $langue): bool
+    {
+        $langue = in_array($langue, ['fr', 'en']) ? $langue : 'fr';
+        $stmt = $this->db->prepare('UPDATE gestionnaires SET langue = :langue WHERE id = :id');
+        return $stmt->execute([':langue' => $langue, ':id' => $id]);
     }
 
     public function trouverParEmail(string $email)
@@ -62,7 +70,7 @@ class GestionnaireModel
 
     public function trouverParId(int $id)
     {
-        $stmt = $this->db->prepare('SELECT id, nom, telephone, email, sous_service_id FROM gestionnaires WHERE id = :id');
+        $stmt = $this->db->prepare('SELECT id, nom, telephone, email, sous_service_id, langue FROM gestionnaires WHERE id = :id');
         $stmt->execute([':id' => $id]);
         return $stmt->fetch();
     }

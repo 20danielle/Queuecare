@@ -12,6 +12,8 @@ ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
 require_once __DIR__ . '/helpers/AuthHelper.php';
+require_once __DIR__ . '/helpers/LangHelper.php';
+LangHelper::init();
 
 // L'inscription et la connexion sont publiques : pas de vérification d'accès
 $action = $_GET['action'] ?? 'dashboard';
@@ -68,7 +70,9 @@ $allowedActions = [
     // Historique
     'get_historique',
     // Statistiques
-    'get_stats_evolution_ss', 'get_temps_attente_evolution_ss'
+    'get_stats_evolution_ss', 'get_temps_attente_evolution_ss',
+    // Langue
+    'changer_langue',
 ];
 
 if (!in_array($action, $allowedActions)) {
@@ -165,6 +169,10 @@ switch ($action) {
 
     case 'get_temps_attente_evolution_ss':
         $ctrl->getTempsAttenteEvolutionSS();
+        break;
+
+    case 'changer_langue':
+        $ctrl->changerLangue();
         break;
 
     default:

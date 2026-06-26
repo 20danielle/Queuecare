@@ -336,6 +336,10 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
         .sidebar-footer { padding: 20px 16px; border-top: 1px solid rgba(255,255,255,0.1); }
         .logout-btn { display: flex; align-items: center; gap: 12px; padding: 10px 16px; color: rgba(255,255,255,0.7); text-decoration: none; border-radius: 12px; transition: all 0.2s; }
         .logout-btn:hover { background: rgba(255,255,255,0.1); color: white; }
+        .lang-toggle-wrap { display:flex; align-items:center; gap:0; background:rgba(255,255,255,.08); border-radius:10px; padding:4px; margin-bottom:12px; }
+        .lang-toggle-wrap .lang-label { font-size:.65rem; font-weight:600; color:rgba(255,255,255,.45); text-transform:uppercase; letter-spacing:.06em; padding:0 6px 0 4px; flex-shrink:0; }
+        .lang-toggle-btn { flex:1; padding:6px 0; border:none; border-radius:7px; background:transparent; color:rgba(255,255,255,.55); font-size:.8rem; cursor:pointer; font-family:inherit; font-weight:500; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:4px; }
+        .lang-toggle-btn.active { background:#00a86b; color:#fff; font-weight:700; box-shadow:0 2px 8px rgba(0,168,107,.35); }
         .main-content { flex: 1; margin-left: 260px; background: #f5f7fa; min-height: 100vh; }
 
         /* Hamburger */
@@ -419,6 +423,19 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
         </nav>
         
         <div class="sidebar-footer">
+            <!-- Sélecteur de langue -->
+            <?php $currentLang = \LangHelper::getLang(); ?>
+            <div class="lang-toggle-wrap">
+                <span class="lang-label"><i class="fa-solid fa-language"></i></span>
+                <button type="button" class="lang-toggle-btn <?= $currentLang==='fr'?'active':'' ?>"
+                        onclick="dashChangerLangue('fr','medecin')">
+                    🇫🇷 Français
+                </button>
+                <button type="button" class="lang-toggle-btn <?= $currentLang==='en'?'active':'' ?>"
+                        onclick="dashChangerLangue('en','medecin')">
+                    🇬🇧 English
+                </button>
+            </div>
             <a href="accueil.php" class="logout-btn" style="margin-bottom: 6px;"><i class="fa-solid fa-house"></i><span>Accueil</span></a>
             <a href="medecin.php?action=deconnexion" class="logout-btn"><i class="fa-solid fa-right-from-bracket"></i><span>Déconnexion</span></a>
         </div>
@@ -1998,6 +2015,18 @@ function confirmerRdv() {
 document.getElementById('modalRdv').addEventListener('click', function(e) {
     if (e.target === this) fermerModalRdv();
 });
+
+// ── Changement de langue depuis la sidebar ──
+async function dashChangerLangue(langue, role) {
+    const endpoint = role === 'medecin'
+        ? 'medecin.php?action=changer_langue'
+        : 'gestionnaire.php?action=changer_langue';
+    const fd = new FormData();
+    fd.append('langue', langue);
+    const res = await fetch(endpoint, {method:'POST', body:fd});
+    const d = await res.json();
+    if (d.success) window.location.reload();
+}
 </script>
 
 </body>

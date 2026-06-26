@@ -10,6 +10,7 @@ require_once __DIR__ . '/../models/UtilisateurModel.php';
 require_once __DIR__ . '/../helpers/UploadHelper.php';
 require_once __DIR__ . '/../helpers/AuthHelper.php';
 require_once __DIR__ . '/../helpers/QueueNotificationService.php';
+require_once __DIR__ . '/../helpers/LangHelper.php';
 
 class MedecinController
 {
@@ -52,8 +53,9 @@ class MedecinController
         $password  = $_POST['password']         ?? '';
         $confirm   = $_POST['confirm']          ?? '';
         $specialiteId = (int)($_POST['sous_service_id'] ?? 0);
+        $langue    = in_array($_POST['langue'] ?? '', ['fr','en']) ? $_POST['langue'] : 'fr';
 
-        $anciens = compact('nom', 'prenom', 'telephone', 'email', 'specialiteId');
+        $anciens = compact('nom', 'prenom', 'telephone', 'email', 'specialiteId', 'langue');
 
         // Upload de la photo
         $photoPath = null;
@@ -118,6 +120,7 @@ class MedecinController
             'email'      => $email,
             'password'   => $password,
             'photo'      => $photoPath,
+            'langue'     => $langue,
         ]);
 
         if (!$medecinId) {
@@ -208,6 +211,10 @@ class MedecinController
         $_SESSION['medecin_id']    = $user['medecin_id'];
         $_SESSION['role']          = $user['role'];
         $_SESSION['last_activity'] = time();
+
+        // Restaurer la langue préférée du médecin
+        $medecinData = $this->model->trouverParId((int)$user['medecin_id']);
+        LangHelper::setLang($medecinData['langue'] ?? 'fr');
 
         header('Location: medecin.php?action=dashboard');
         exit;
@@ -730,6 +737,21 @@ class MedecinController
         $_SESSION['user_nom'] = $prenom . ' ' . $nom;
 
         echo json_encode(['success' => true, 'message' => 'Profil mis à jour avec succès.']);
+        exit;
+    }
+
+    public function changerLangue(): void
+    {
+        header('Content-Type: application/json');
+        if (!AuthHelper::peutAccederEspaceMedecin()) {
+            echo json_encode(['success' => false, 'message' => 'Non authentifié']);
+            exit;
+        }
+        $langue = $_POST['langue'] ?? 'fr';
+        $id = (int)$_SESSION['medecin_id'];
+        $this->model->mettreAJourLangue($id, $langue);
+        LangHelper::setLang($langue);
+        echo json_encode(['success' => true, 'langue' => LangHelper::getLang()]);
         exit;
     }
     

@@ -7,6 +7,7 @@ require_once __DIR__ . '/../helpers/AuthHelper.php';
 require_once __DIR__ . '/../models/UtilisateurModel.php';
 require_once __DIR__ . '/../models/HopitalModel.php';
 require_once __DIR__ . '/../config/app.php';
+require_once __DIR__ . '/../helpers/LangHelper.php';
 
 class AuthController {
 
@@ -55,6 +56,8 @@ class AuthController {
             }
 
             $utilisateurModel->updateDerniereConnexion($user['id']);
+            // Restaurer la langue préférée de l'utilisateur
+            LangHelper::setLang($user['langue'] ?? 'fr');
             $this->_redirecterSelonRole($user['role']);
         } else {
             header('Location: index.php?action=login&error=identifiants_invalides');
@@ -100,6 +103,7 @@ class AuthController {
         $password    = $_POST['password']          ?? '';
         $confirm     = $_POST['password_confirm']  ?? '';
         $nomHopital  = trim($_POST['nom_hopital']  ?? '');
+        $langue      = in_array($_POST['langue'] ?? '', ['fr','en']) ? $_POST['langue'] : 'fr';
 
         // Validations
         $errors = [];
@@ -142,6 +146,10 @@ class AuthController {
         $_SESSION['user_nom']      = $nom;
         $_SESSION['role']          = 'admin';
         $_SESSION['last_activity'] = time();
+
+        // Sauvegarder la langue choisie
+        $utilisateurModel->mettreAJourLangue($adminId, $langue);
+        LangHelper::setLang($langue);
 
         header('Location: admin.php?setup=1');
         exit;

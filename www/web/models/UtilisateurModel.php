@@ -210,6 +210,12 @@ class UtilisateurModel {
         return $stmt->execute([':id' => $id]);
     }
 
+    public function mettreAJourLangue(int $id, string $langue): bool {
+        $langue = in_array($langue, ['fr','en']) ? $langue : 'fr';
+        $stmt = $this->db->prepare("UPDATE utilisateurs SET langue = :langue WHERE id = :id");
+        return $stmt->execute([':langue' => $langue, ':id' => $id]);
+    }
+
     /**
      * Désactive un utilisateur
      */

@@ -53,6 +53,9 @@ $initiale = mb_strtoupper(mb_substr($gestionnaire['nom'] ?? 'G', 0, 1));
         .btn-save:hover{opacity:.9}
         .msg-success{background:#d1fae5;color:#065f46;padding:12px 16px;border-radius:10px;margin-bottom:16px;font-size:.875rem;font-weight:600;display:none}
         .msg-error{background:#fee2e2;color:#991b1b;padding:12px 16px;border-radius:10px;margin-bottom:16px;font-size:.875rem;display:none}
+        .lang-btn{padding:10px 16px;border:2px solid var(--border);border-radius:10px;background:white;cursor:pointer;font-size:.875rem;font-family:inherit;transition:all .2s;flex:1;display:flex;align-items:center;justify-content:center;gap:6px;font-weight:500;color:#475569}
+        .lang-btn:hover{border-color:var(--green);background:#d1fae5;color:#065f46}
+        .lang-btn.lang-active{border-color:var(--green);background:var(--green);color:white;font-weight:700;box-shadow:0 2px 10px rgba(16,185,129,.25)}
     </style>
 </head>
 <body>
@@ -94,6 +97,28 @@ $initiale = mb_strtoupper(mb_substr($gestionnaire['nom'] ?? 'G', 0, 1));
                 <div class="form-group">
                     <label>Email</label>
                     <input type="email" name="email" value="<?= htmlspecialchars($gestionnaire['email']) ?>" required>
+                </div>
+
+                <div class="separator"></div>
+                <div class="section-title"><i class="fa-solid fa-language"></i> Langue de l'interface / Interface Language</div>
+
+                <div class="form-group">
+                    <label style="margin-bottom:10px;display:block">
+                        Choisissez la langue de votre espace&nbsp;/&nbsp;<em>Choose the language of your portal</em>
+                    </label>
+                    <div style="display:flex;gap:12px;margin-top:4px">
+                        <button type="button" class="lang-btn <?= ($gestionnaire['langue'] ?? 'fr') === 'fr' ? 'lang-active' : '' ?>"
+                                onclick="changerLangue('fr')" id="btnFr">
+                            🇫🇷 Français
+                        </button>
+                        <button type="button" class="lang-btn <?= ($gestionnaire['langue'] ?? 'fr') === 'en' ? 'lang-active' : '' ?>"
+                                onclick="changerLangue('en')" id="btnEn">
+                            🇬🇧 English
+                        </button>
+                    </div>
+                    <div id="langMsg" style="display:none;margin-top:10px;padding:8px 12px;border-radius:8px;background:#d1fae5;font-size:.82rem;color:#065f46;font-weight:600">
+                        <i class="fa-solid fa-circle-check"></i> <span id="langMsgTxt">Langue modifiée.</span>
+                    </div>
                 </div>
 
                 <div class="separator"></div>
@@ -162,6 +187,24 @@ document.getElementById('profilForm').addEventListener('submit', async function(
     btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Enregistrer les modifications';
     btn.disabled = false;
 });
+
+async function changerLangue(langue) {
+    const fd = new FormData();
+    fd.append('langue', langue);
+    const res = await fetch('gestionnaire.php?action=changer_langue', {method:'POST', body:fd});
+    const d = await res.json();
+    if (d.success) {
+        document.getElementById('btnFr').classList.toggle('lang-active', langue === 'fr');
+        document.getElementById('btnEn').classList.toggle('lang-active', langue === 'en');
+        const msg = langue === 'fr' ? 'Langue modifiée : Français' : 'Language changed: English';
+        document.getElementById('langMsgTxt').textContent = msg;
+        document.getElementById('langMsg').style.display = 'block';
+        setTimeout(() => {
+            document.getElementById('langMsg').style.display = 'none';
+            window.location.reload();
+        }, 1500);
+    }
+}
 </script>
 </body>
 </html>

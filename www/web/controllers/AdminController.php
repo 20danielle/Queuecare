@@ -10,6 +10,7 @@ require_once __DIR__ . '/../models/MedecinModel.php';
 require_once __DIR__ . '/../models/GestionnaireModel.php';
 require_once __DIR__ . '/../models/HopitalModel.php';
 require_once __DIR__ . '/../models/ServiceModel.php';
+require_once __DIR__ . '/../helpers/LangHelper.php';
 
 class AdminController {
 
@@ -517,6 +518,22 @@ class AdminController {
         $_SESSION['user_nom']   = $nom;
         $_SESSION['user_email'] = $email;
         echo json_encode(['success'=>true]);
+        exit;
+    }
+
+    public function changerLangueAdmin(): void {
+        header('Content-Type: application/json');
+        if (!AuthHelper::estAdmin()) {
+            echo json_encode(['success' => false, 'message' => 'Non authentifié']);
+            exit;
+        }
+        $langue  = in_array($_POST['langue'] ?? '', ['fr','en']) ? $_POST['langue'] : 'fr';
+        $adminId = (int)($_SESSION['user_id'] ?? 0);
+        if ($adminId > 0) {
+            $this->utilisateurModel->mettreAJourLangue($adminId, $langue);
+        }
+        LangHelper::setLang($langue);
+        echo json_encode(['success' => true, 'langue' => LangHelper::getLang()]);
         exit;
     }
 

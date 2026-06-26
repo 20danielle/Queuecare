@@ -132,6 +132,14 @@ $globalError = $_GET['error'] ?? '';
             </div>
         </div>
 
+        <div class="mb-3">
+            <label for="langue" class="form-label fw-semibold"><i class="fas fa-language me-1"></i>Langue préférée / Preferred language</label>
+            <select class="form-select" id="langue" name="langue">
+                <option value="fr" <?= ($old['langue'] ?? 'fr') === 'fr' ? 'selected' : '' ?>>🇫🇷 Français</option>
+                <option value="en" <?= ($old['langue'] ?? '') === 'en' ? 'selected' : '' ?>>🇬🇧 English</option>
+            </select>
+        </div>
+
         <button type="submit" class="btn btn-primary btn-submit">
             <i class="fas fa-check-circle me-2"></i>Créer et accéder au tableau de bord
         </button>

@@ -230,6 +230,10 @@ unset($_SESSION['type_message']);
         .sidebar-footer { padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
         .logout-btn { display: flex; align-items: center; gap: 12px; padding: 10px 12px; color: rgba(255,255,255,0.7); text-decoration: none; border-radius: 8px; transition: all 0.2s; }
         .logout-btn:hover { background: rgba(255,255,255,0.1); color: white; }
+        .lang-toggle-wrap { display:flex; align-items:center; gap:0; background:rgba(255,255,255,.08); border-radius:10px; padding:4px; margin-bottom:12px; }
+        .lang-toggle-wrap .lang-label { font-size:.65rem; font-weight:600; color:rgba(255,255,255,.45); text-transform:uppercase; letter-spacing:.06em; padding:0 6px 0 4px; flex-shrink:0; }
+        .lang-toggle-btn { flex:1; padding:6px 0; border:none; border-radius:7px; background:transparent; color:rgba(255,255,255,.55); font-size:.8rem; cursor:pointer; font-family:inherit; font-weight:500; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:4px; }
+        .lang-toggle-btn.active { background:#00a86b; color:#fff; font-weight:700; box-shadow:0 2px 8px rgba(0,168,107,.35); }
         .main-content { flex: 1; margin-left: 280px; background: #f5f7fa; min-height: 100vh; }
 
         /* Hamburger */
@@ -303,6 +307,19 @@ unset($_SESSION['type_message']);
             <div class="nav-item" data-section="profil" onclick="showSection('profil')"><i class="fa-solid fa-user"></i><span>Mon profil</span></div>
         </nav>
         <div class="sidebar-footer">
+            <!-- Sélecteur de langue -->
+            <?php $currentLang = \LangHelper::getLang(); ?>
+            <div class="lang-toggle-wrap">
+                <span class="lang-label"><i class="fa-solid fa-language"></i></span>
+                <button type="button" class="lang-toggle-btn <?= $currentLang==='fr'?'active':'' ?>"
+                        onclick="dashChangerLangueGest('fr')">
+                    🇫🇷 Français
+                </button>
+                <button type="button" class="lang-toggle-btn <?= $currentLang==='en'?'active':'' ?>"
+                        onclick="dashChangerLangueGest('en')">
+                    🇬🇧 English
+                </button>
+            </div>
             <a href="accueil.php" class="logout-btn" style="margin-bottom:8px;"><i class="fa-solid fa-house"></i><span>Accueil</span></a>
             <a href="gestionnaire.php?action=deconnexion" class="logout-btn"><i class="fa-solid fa-right-from-bracket"></i><span>Déconnexion</span></a>
         </div>
@@ -1937,6 +1954,16 @@ unset($_SESSION['type_message']);
 .btn-sm-resume:hover { background:#059669!important; }
 .badge-pause { background:#fef3c7;color:#92400e;border:1px solid #fde68a;font-weight:600; }
 </style>
+
+<script>
+async function dashChangerLangueGest(langue) {
+    const fd = new FormData();
+    fd.append('langue', langue);
+    const res = await fetch('gestionnaire.php?action=changer_langue', {method:'POST', body:fd});
+    const d = await res.json();
+    if (d.success) window.location.reload();
+}
+</script>
 
 </body>
 </html>

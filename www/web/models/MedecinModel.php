@@ -36,8 +36,8 @@ class MedecinModel
     public function creer(array $d): bool
     {
         $stmt = $this->db->prepare(
-            'INSERT INTO medecins (nom, prenom, specialite, telephone, email, password, statut, photo)
-             VALUES (:nom, :prenom, :specialite, :telephone, :email, :password, "disponible", :photo)'
+            'INSERT INTO medecins (nom, prenom, specialite, telephone, email, password, statut, photo, langue)
+             VALUES (:nom, :prenom, :specialite, :telephone, :email, :password, "disponible", :photo, :langue)'
         );
         return $stmt->execute([
             ':nom'        => htmlspecialchars(trim($d['nom'])),
@@ -47,6 +47,7 @@ class MedecinModel
             ':email'      => strtolower(trim($d['email'])),
             ':password'   => $d['password'],  // hash bcrypt fourni par le controller
             ':photo'      => $d['photo'] ?? null,
+            ':langue'     => in_array($d['langue'] ?? '', ['fr','en']) ? $d['langue'] : 'fr',
         ]);
     }
 
@@ -682,6 +683,13 @@ class MedecinModel
             ':photo' => $photoPath,
             ':id' => $id
         ]);
+    }
+
+    public function mettreAJourLangue(int $id, string $langue): bool
+    {
+        $langue = in_array($langue, ['fr', 'en']) ? $langue : 'fr';
+        $stmt = $this->db->prepare('UPDATE medecins SET langue = :langue WHERE id = :id');
+        return $stmt->execute([':langue' => $langue, ':id' => $id]);
     }
 
     public function verifierMotDePasse(int $id, string $password): bool

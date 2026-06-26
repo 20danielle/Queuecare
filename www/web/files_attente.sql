@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1:3306
--- Généré le : jeu. 25 juin 2026 à 12:08
+-- Généré le : ven. 26 juin 2026 à 08:30
 -- Version du serveur : 8.0.31
 -- Version de PHP : 8.0.26
 
@@ -233,7 +233,7 @@ CREATE TABLE IF NOT EXISTS `consultations` (
   KEY `idx_consult_emission` (`heure_emission`),
   KEY `idx_consult_rang` (`sous_service_id`,`rang`),
   KEY `idx_consult_qrcode` (`qr_code_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=68 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Consultations des patients (remplace rendez_vous)';
+) ENGINE=InnoDB AUTO_INCREMENT=77 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Consultations des patients (remplace rendez_vous)';
 
 --
 -- Déchargement des données de la table `consultations`
@@ -306,7 +306,16 @@ INSERT INTO `consultations` (`id`, `patient_id`, `sous_service_id`, `medecin_id`
 (64, 19, 3, 3, NULL, NULL, 'absent', 27, 'PLACE', '2026-06-24 21:19:10', '2026-06-24 07:58:27', NULL, NULL, NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-24 21:19:10'),
 (65, 20, 3, 1, NULL, NULL, 'absent', 28, 'PLACE', '2026-06-24 21:42:34', '2026-06-24 07:58:27', NULL, NULL, NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-24 21:42:34'),
 (66, 20, 3, 1, NULL, NULL, 'annule', 29, 'PLACE', '2026-06-24 21:42:55', '2026-06-24 07:58:27', NULL, NULL, NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-24 21:42:55'),
-(67, 20, 3, 1, NULL, NULL, 'absent', 30, 'PLACE', '2026-06-24 21:51:25', '2026-06-24 07:58:27', NULL, NULL, NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-24 21:51:25');
+(67, 20, 3, 1, NULL, NULL, 'absent', 30, 'PLACE', '2026-06-24 21:51:25', '2026-06-24 07:58:27', NULL, NULL, NULL, NULL, 0, 0, 1800, NULL, NULL, '2026-06-24 21:51:25'),
+(68, 7, 3, 1, NULL, NULL, 'traite', 1, 'PLACE', '2026-06-25 14:25:33', '2026-06-25 14:25:33', '2026-06-25 14:28:00', '2026-06-25 14:40:16', NULL, NULL, 0, 0, 1094, NULL, NULL, '2026-06-25 14:25:33'),
+(69, 11, 3, 3, NULL, NULL, 'traite', 2, 'PLACE', '2026-06-25 14:26:35', '2026-06-25 14:43:47', '2026-06-25 14:28:06', '2026-06-25 14:40:50', NULL, NULL, 0, 0, 1094, NULL, NULL, '2026-06-25 14:26:35'),
+(70, 20, 3, 1, NULL, NULL, 'traite', 3, 'PLACE', '2026-06-25 14:27:13', '2026-06-25 15:02:01', '2026-06-25 14:28:56', '2026-06-25 14:44:56', NULL, NULL, 660, 0, 1094, NULL, NULL, '2026-06-25 14:27:13'),
+(71, 19, 3, 3, NULL, NULL, 'traite', 4, 'PLACE', '2026-06-25 14:27:36', '2026-06-25 15:20:15', '2026-06-25 14:40:54', '2026-06-25 15:29:30', NULL, NULL, 0, 0, 1094, NULL, NULL, '2026-06-25 14:27:36'),
+(72, 18, 3, 1, NULL, NULL, 'traite', 5, 'PLACE', '2026-06-25 14:27:48', '2026-06-25 15:38:29', '2026-06-25 14:44:45', '2026-06-25 15:29:44', NULL, NULL, 0, 0, 1094, NULL, NULL, '2026-06-25 14:27:48'),
+(73, 21, 3, 1, NULL, NULL, 'absent', 6, 'PLACE', '2026-06-25 21:08:28', '2026-06-25 15:02:59', NULL, NULL, NULL, NULL, 0, 0, 1094, NULL, NULL, '2026-06-25 21:08:28'),
+(74, 21, 3, 1, NULL, NULL, 'traite', 7, 'PLACE', '2026-06-25 21:14:57', '2026-06-25 15:02:59', '2026-06-25 21:15:13', '2026-06-25 21:16:32', NULL, NULL, 0, 0, 1094, NULL, 75, '2026-06-25 21:14:57'),
+(75, 21, 3, 1, NULL, NULL, 'absent', 1, 'MANUEL', '2026-06-25 21:15:37', '2026-06-26 08:00:00', NULL, NULL, NULL, NULL, 0, 0, 2491, 'Suivi', NULL, '2026-06-25 21:15:37'),
+(76, 11, 3, 1, NULL, NULL, 'annule', 1, 'PLACE', '2026-06-26 09:25:32', '2026-06-26 09:25:32', NULL, NULL, NULL, NULL, 0, 0, 1359, NULL, NULL, '2026-06-26 09:25:32');
 
 --
 -- Déclencheurs `consultations`
@@ -404,7 +413,7 @@ INSERT INTO `emplois_du_temps` (`id`, `sous_service_id`, `medecin_id`, `jour`, `
 (3, 3, 1, '2026-06-23', '08:00:00', '09:00:00', 1, '2026-06-22 22:09:36'),
 (4, 3, 1, '2026-06-24', '12:00:00', '13:00:00', 1, '2026-06-22 22:21:39'),
 (5, 3, 1, '2026-06-25', '09:00:00', '10:00:00', 1, '2026-06-23 19:33:51'),
-(6, 3, 1, '2026-06-26', '08:00:00', '09:00:00', 1, '2026-06-24 20:48:49');
+(6, 3, 1, '2026-06-26', '08:00:00', '09:00:00', 2, '2026-06-24 20:48:49');
 
 -- --------------------------------------------------------
 
@@ -421,6 +430,7 @@ CREATE TABLE IF NOT EXISTS `gestionnaires` (
   `email` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
   `password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'Haché avec bcrypt (coût 12)',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `langue` enum('fr','en') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'fr' COMMENT 'Langue préférée du gestionnaire',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_gestionnaires_email` (`email`),
   UNIQUE KEY `uq_gestionnaires_telephone` (`telephone`),
@@ -431,8 +441,8 @@ CREATE TABLE IF NOT EXISTS `gestionnaires` (
 -- Déchargement des données de la table `gestionnaires`
 --
 
-INSERT INTO `gestionnaires` (`id`, `sous_service_id`, `nom`, `telephone`, `email`, `password`, `created_at`) VALUES
-(1, 3, 'ange zutchi', '696945237', 'angezutchi@gmail.com', '$2y$12$VxDIOeSgSHPd181cFArQf.BB1cJnDKHAM0SUZlBOXstVkgyvvzvNK', '2026-06-04 12:25:18');
+INSERT INTO `gestionnaires` (`id`, `sous_service_id`, `nom`, `telephone`, `email`, `password`, `created_at`, `langue`) VALUES
+(1, 3, 'ange zutchi', '696945237', 'angezutchi@gmail.com', '$2y$12$VxDIOeSgSHPd181cFArQf.BB1cJnDKHAM0SUZlBOXstVkgyvvzvNK', '2026-06-04 12:25:18', 'en');
 
 -- --------------------------------------------------------
 
@@ -485,7 +495,7 @@ CREATE TABLE IF NOT EXISTS `historique_durees` (
   KEY `idx_hist_consultation` (`consultation_id`),
   KEY `idx_hist_medecin` (`medecin_id`),
   KEY `idx_hist_created` (`created_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Historique des durées réelles — base du recalcul nocturne';
+) ENGINE=InnoDB AUTO_INCREMENT=39 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Historique des durées réelles — base du recalcul nocturne';
 
 --
 -- Déchargement des données de la table `historique_durees`
@@ -514,7 +524,13 @@ INSERT INTO `historique_durees` (`id`, `sous_service_id`, `consultation_id`, `me
 (29, 3, 57, 3, 443, '2026-06-24 14:11:01', 4, 14, 0, '2026-06-24 14:18:24'),
 (30, 3, 60, 1, 656, '2026-06-24 20:35:37', 4, 20, 0, '2026-06-24 20:46:33'),
 (31, 3, 61, 1, 1756, '2026-06-24 20:47:48', 4, 20, 0, '2026-06-24 21:17:04'),
-(32, 3, 63, 1, 487, '2026-06-24 21:19:45', 4, 21, 0, '2026-06-24 21:27:52');
+(32, 3, 63, 1, 487, '2026-06-24 21:19:45', 4, 21, 0, '2026-06-24 21:27:52'),
+(33, 3, 68, 1, 736, '2026-06-25 14:28:00', 5, 14, 0, '2026-06-25 14:40:16'),
+(34, 3, 69, 3, 764, '2026-06-25 14:28:06', 5, 14, 0, '2026-06-25 14:40:50'),
+(35, 3, 70, 1, 960, '2026-06-25 14:28:56', 5, 14, 0, '2026-06-25 14:44:56'),
+(36, 3, 71, 3, 2916, '2026-06-25 14:40:54', 5, 14, 0, '2026-06-25 15:29:30'),
+(37, 3, 72, 1, 2699, '2026-06-25 14:44:45', 5, 14, 0, '2026-06-25 15:29:44'),
+(38, 3, 74, 1, 79, '2026-06-25 21:15:13', 5, 21, 0, '2026-06-25 21:16:32');
 
 --
 -- Déclencheurs `historique_durees`
@@ -583,14 +599,15 @@ CREATE TABLE IF NOT EXISTS `logs_estimation` (
   PRIMARY KEY (`id`),
   KEY `idx_logs_ss` (`sous_service_id`),
   KEY `idx_logs_date` (`date_calcul`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Traçabilité des recalculs nocturnes de la moyenne pondérée';
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Traçabilité des recalculs nocturnes de la moyenne pondérée';
 
 --
 -- Déchargement des données de la table `logs_estimation`
 --
 
 INSERT INTO `logs_estimation` (`id`, `sous_service_id`, `date_calcul`, `nb_observations`, `ancienne_duree`, `nouvelle_duree`, `created_at`) VALUES
-(1, 3, '2026-06-25', 9, 1800, 1094, '2026-06-25 12:07:30');
+(1, 3, '2026-06-25', 9, 1800, 1094, '2026-06-25 12:07:30'),
+(2, 3, '2026-06-26', 6, 1094, 1359, '2026-06-26 07:08:24');
 
 -- --------------------------------------------------------
 
@@ -610,6 +627,7 @@ CREATE TABLE IF NOT EXISTS `medecins` (
   `statut` enum('disponible','indisponible','conge') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'disponible',
   `photo` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Chemin vers la photo du médecin',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `langue` enum('fr','en') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'fr' COMMENT 'Langue préférée du médecin (fr=Français, en=Anglais)',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_medecins_email` (`email`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Médecins intervenant dans les sous-services';
@@ -618,10 +636,10 @@ CREATE TABLE IF NOT EXISTS `medecins` (
 -- Déchargement des données de la table `medecins`
 --
 
-INSERT INTO `medecins` (`id`, `nom`, `prenom`, `specialite`, `telephone`, `email`, `password`, `statut`, `photo`, `created_at`) VALUES
-(1, 'MATHILDE', 'MOUMI', 'Cardiologie', '0677453688', 'mathildemoumi@gmail.com', '$2y$12$Q4LNostbNffHMSb0NRfleO8IgloC5aeFowzz6D52P1k/LHhsK6Bx6', 'disponible', 'uploads/medecins/med_6a39a46268986.jpg', '2026-06-04 11:56:31'),
-(2, 'MAGLOIRE', 'Ebele', 'Hématologie', '677889900', 'ebelemagloire@gmail.com', '$2y$10$oKdZTF726kgSu2G2fFlvSOASyyrAOcefyhGzS8SH3xTC610TzzNPS', 'disponible', NULL, '2026-06-16 19:34:26'),
-(3, 'MOUMI', 'NEILL', 'Cardiologie', '695406634', 'neillmoumi@gmail.com', 'Ne1llmoum!', 'disponible', 'uploads/medecins/med_6a3b7997af253.jpg', '2026-06-24 07:16:01');
+INSERT INTO `medecins` (`id`, `nom`, `prenom`, `specialite`, `telephone`, `email`, `password`, `statut`, `photo`, `created_at`, `langue`) VALUES
+(1, 'MATHILDE', 'MOUMI', 'Cardiologie', '0677453688', 'mathildemoumi@gmail.com', '$2y$12$Q4LNostbNffHMSb0NRfleO8IgloC5aeFowzz6D52P1k/LHhsK6Bx6', 'disponible', 'uploads/medecins/med_6a39a46268986.jpg', '2026-06-04 11:56:31', 'en'),
+(2, 'MAGLOIRE', 'Ebele', 'Hématologie', '677889900', 'ebelemagloire@gmail.com', '$2y$10$oKdZTF726kgSu2G2fFlvSOASyyrAOcefyhGzS8SH3xTC610TzzNPS', 'disponible', NULL, '2026-06-16 19:34:26', 'fr'),
+(3, 'MOUMI', 'NEILL', 'Cardiologie', '695406634', 'neillmoumi@gmail.com', 'Ne1llmoum!', 'disponible', 'uploads/medecins/med_6a3b7997af253.jpg', '2026-06-24 07:16:01', 'fr');
 
 -- --------------------------------------------------------
 
@@ -722,7 +740,14 @@ CREATE TABLE IF NOT EXISTS `password_resets` (
   PRIMARY KEY (`id`),
   KEY `idx_email` (`email`),
   KEY `idx_expire_at` (`expire_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Codes de vérification pour la réinitialisation du mot de passe';
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Codes de vérification pour la réinitialisation du mot de passe';
+
+--
+-- Déchargement des données de la table `password_resets`
+--
+
+INSERT INTO `password_resets` (`id`, `email`, `code_hash`, `expire_at`, `utilise`, `created_at`) VALUES
+(1, 'angezutchi@gmail.com', '$2y$10$PUwaJTx7sO2Dz4PdF2rOQuPGZzamJn4eUFVdC1d66svRwPveUUwIe', '2026-06-25 13:45:16', 1, '2026-06-25 12:30:16');
 
 -- --------------------------------------------------------
 
@@ -745,7 +770,7 @@ CREATE TABLE IF NOT EXISTS `patients` (
   UNIQUE KEY `uq_patients_email` (`email`),
   UNIQUE KEY `uq_patients_telephone` (`telephone`),
   KEY `idx_patients_statut` (`statut`)
-) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Patients / usagers du système';
+) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Patients / usagers du système';
 
 --
 -- Déchargement des données de la table `patients`
@@ -771,7 +796,8 @@ INSERT INTO `patients` (`id`, `nom`, `prenom`, `telephone`, `email`, `password`,
 (17, 'WOULOU', 'GISCARD', '600998877', 'woulougiscard@gmail.com', NULL, NULL, 'actif', '2026-06-24 20:47:24'),
 (18, 'BATACK', 'SAWA', '667788990', 'sawabatack@gmail.com', NULL, NULL, 'actif', '2026-06-24 21:18:26'),
 (19, 'NGON', 'BULU', '665544332', 'bulungon@gmail.com', NULL, NULL, 'actif', '2026-06-24 21:19:09'),
-(20, 'TSANG', 'BAMI', '657483920', 'bamitsang@gmail.com', NULL, NULL, 'actif', '2026-06-24 21:42:34');
+(20, 'TSANG', 'BAMI', '657483920', 'bamitsang@gmail.com', NULL, NULL, 'actif', '2026-06-24 21:42:34'),
+(21, 'DIOUF', 'ALI', '675849302', 'alidiouf@gmail.com', NULL, NULL, 'actif', '2026-06-25 21:08:27');
 
 -- --------------------------------------------------------
 
@@ -816,7 +842,7 @@ CREATE TABLE IF NOT EXISTS `qr_codes` (
   KEY `idx_qrcodes_statut` (`statut`),
   KEY `idx_qrcodes_expire_at` (`expire_at`),
   KEY `idx_qrcodes_created_by` (`created_by`)
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='QR codes générés pour les sous-services';
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='QR codes générés pour les sous-services';
 
 --
 -- Déchargement des données de la table `qr_codes`
@@ -833,7 +859,8 @@ INSERT INTO `qr_codes` (`id`, `sous_service_id`, `token`, `qr_code_path`, `expir
 (9, 3, '066c96d092639ed503db474dd6fef9642fc23da7667b311ca3a72ecf8d9ff90f', 'public/qrcodes/qrcode_3_1782160936.png', '2026-06-22 22:02:16', 'http://localhost/fil-attente3/scan_ticket.php?token=066c96d092639ed503db474dd6fef9642fc23da7667b311ca3a72ecf8d9ff90f', 0, 'expire', '2026-06-22 21:42:17', 1),
 (10, 3, '531ddf80a10db66bc28d3be88c3899dfaf044fb47efe2b299f18334eb610bbdf', 'public/qrcodes/qrcode_3_1782283860.png', '2026-06-24 08:11:00', 'http://localhost/fil-attente3/scan_ticket.php?token=531ddf80a10db66bc28d3be88c3899dfaf044fb47efe2b299f18334eb610bbdf', 0, 'expire', '2026-06-24 07:51:01', 1),
 (11, 3, '8231a3c73fc72092c594e373e2e15faa80a9015de6f3bcf157a0b6cb2d5b9b40', 'public/qrcodes/qrcode_3_1782296561.png', '2026-06-24 11:42:41', 'http://localhost/fil-attente3/scan_ticket.php?token=8231a3c73fc72092c594e373e2e15faa80a9015de6f3bcf157a0b6cb2d5b9b40', 0, 'expire', '2026-06-24 11:22:42', 1),
-(12, 3, '278f208052e13036fed2af755921817ef923cdeebc5912a4357a4fed3914434b', 'public/qrcodes/qrcode_3_1782332853.png', '2026-06-24 21:47:33', 'http://localhost/fil-attente2/scan_ticket.php?token=278f208052e13036fed2af755921817ef923cdeebc5912a4357a4fed3914434b', 0, 'expire', '2026-06-24 21:27:34', 1);
+(12, 3, '278f208052e13036fed2af755921817ef923cdeebc5912a4357a4fed3914434b', 'public/qrcodes/qrcode_3_1782332853.png', '2026-06-24 21:47:33', 'http://localhost/fil-attente2/scan_ticket.php?token=278f208052e13036fed2af755921817ef923cdeebc5912a4357a4fed3914434b', 0, 'expire', '2026-06-24 21:27:34', 1),
+(13, 3, '017f3473d140e4024a73077b70f1ff3ef55b2f90904ecdc8ea5349effcca0ba5', 'public/qrcodes/qrcode_3_1782412967.png', '2026-06-25 20:02:47', 'http://localhost/fil-attente2/scan_ticket.php?token=017f3473d140e4024a73077b70f1ff3ef55b2f90904ecdc8ea5349effcca0ba5', 0, 'expire', '2026-06-25 19:42:48', 1);
 
 -- --------------------------------------------------------
 
@@ -917,7 +944,7 @@ CREATE TABLE IF NOT EXISTS `sous_services` (
 --
 
 INSERT INTO `sous_services` (`id`, `service_id`, `nom`, `description`, `duree_rdv_defaut`, `duree_estimee`, `capacite_horaire`, `qr_code`, `qr_expire_at`, `statut`, `created_at`) VALUES
-(3, 1, 'Cardiologie', 'Pour tout problème lié au coeur, consultez le service de cardiologie', 1800, 1094, 10, NULL, NULL, 'actif', '2026-06-04 11:54:36'),
+(3, 1, 'Cardiologie', 'Pour tout problème lié au coeur, consultez le service de cardiologie', 1800, 1359, 10, NULL, NULL, 'actif', '2026-06-04 11:54:36'),
 (4, 1, 'Hématologie', 'Pour les problèmes liés au sang', 1800, 1800, 2, NULL, NULL, 'actif', '2026-06-16 19:27:25');
 
 -- --------------------------------------------------------
@@ -983,6 +1010,7 @@ CREATE TABLE IF NOT EXISTS `utilisateurs` (
   `derniere_connexion` datetime DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `created_by` int DEFAULT NULL,
+  `langue` enum('fr','en') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'fr' COMMENT 'Langue préférée de l''administrateur',
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`),
   KEY `medecin_id` (`medecin_id`),
@@ -994,11 +1022,11 @@ CREATE TABLE IF NOT EXISTS `utilisateurs` (
 -- Déchargement des données de la table `utilisateurs`
 --
 
-INSERT INTO `utilisateurs` (`id`, `email`, `nom`, `mot_de_passe`, `role`, `medecin_id`, `gestionnaire_id`, `statut`, `derniere_connexion`, `created_at`, `created_by`) VALUES
-(1, 'ebelemagloire@gmail.com', 'Dr Ebele Magloire', '$2y$10$81j7JUKeiB4rzCNlyy5J5ubwvbuwQR3gRf9fNP73P.5S0apOk3Nfa', 'admin', 2, NULL, 'actif', '2026-06-22 21:41:01', '2026-06-03 13:50:03', NULL),
-(2, 'mathildemoumi@gmail.com', 'MOUMI MATHILDE', '$2y$10$.2Mi3klTmw5xVzFvxU4H8.3a/r9OZeb4VmsKAY0qkhwXHCxiwHesG', 'medecin', 1, NULL, 'actif', '2026-06-24 21:16:56', '2026-06-04 10:56:31', NULL),
-(3, 'angezutchi@gmail.com', 'ange zutchi', '$2y$10$gm7ASaNRH2VuHd9MPXsN..6IrXz6j8slmMZ2dwUPr6AWK0W1vK2Au', 'gestionnaire', NULL, 1, 'actif', '2026-06-25 12:38:59', '2026-06-04 11:25:18', NULL),
-(4, 'neillmoumi@gmail.com', 'NEILL MOUMI', '$2y$10$w9q6PnVR08/ZBRIttd60FuW4n.oidPlzLbmivb3FgIKEyJIxLkL6W', 'medecin', 3, NULL, 'actif', '2026-06-24 21:16:48', '2026-06-24 06:16:01', NULL);
+INSERT INTO `utilisateurs` (`id`, `email`, `nom`, `mot_de_passe`, `role`, `medecin_id`, `gestionnaire_id`, `statut`, `derniere_connexion`, `created_at`, `created_by`, `langue`) VALUES
+(1, 'ebelemagloire@gmail.com', 'Dr Ebele Magloire', '$2y$10$81j7JUKeiB4rzCNlyy5J5ubwvbuwQR3gRf9fNP73P.5S0apOk3Nfa', 'admin', 2, NULL, 'actif', '2026-06-26 09:13:17', '2026-06-03 13:50:03', NULL, 'fr'),
+(2, 'mathildemoumi@gmail.com', 'MOUMI MATHILDE', '$2y$10$.2Mi3klTmw5xVzFvxU4H8.3a/r9OZeb4VmsKAY0qkhwXHCxiwHesG', 'medecin', 1, NULL, 'actif', '2026-06-26 09:08:33', '2026-06-04 10:56:31', NULL, 'fr'),
+(3, 'angezutchi@gmail.com', 'ange zutchi', '$2y$10$45/tkoftsgWhyTyer5W/aOqM3aPb8u7gXRgx2FlvysV8lOX.2Kqsy', 'gestionnaire', NULL, 1, 'actif', '2026-06-26 09:25:18', '2026-06-04 11:25:18', NULL, 'fr'),
+(4, 'neillmoumi@gmail.com', 'NEILL MOUMI', '$2y$10$w9q6PnVR08/ZBRIttd60FuW4n.oidPlzLbmivb3FgIKEyJIxLkL6W', 'medecin', 3, NULL, 'actif', '2026-06-25 21:29:03', '2026-06-24 06:16:01', NULL, 'fr');
 
 -- --------------------------------------------------------
 
