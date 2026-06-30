@@ -321,6 +321,62 @@ $nbActifsSS = count(array_filter($sousServices, fn($s) => $s['statut'] === 'acti
                   <label class="adm-label">Adresse</label>
                   <textarea class="adm-input" name="adresse"><?= htmlspecialchars($hopital['adresse'] ?? '') ?></textarea>
                 </div>
+              </div>
+
+              <!-- ── Horaires généraux des médecins ── -->
+              <?php
+                // Valeurs actuelles depuis la table services (source de vérité)
+                $hgOuv  = isset($horairesGeneraux['horaires_ouverture']) ? substr($horairesGeneraux['horaires_ouverture'], 0, 5) : '08:00';
+                $hgFer  = isset($horairesGeneraux['horaires_fermeture']) ? substr($horairesGeneraux['horaires_fermeture'], 0, 5) : '18:00';
+                $hgPauD = !empty($horairesGeneraux['pause_debut']) ? substr($horairesGeneraux['pause_debut'], 0, 5) : '';
+                $hgPauF = !empty($horairesGeneraux['pause_fin'])   ? substr($horairesGeneraux['pause_fin'],   0, 5) : '';
+              ?>
+              <div style="border-top:1px solid var(--slate-200);margin:24px 0 20px;"></div>
+              <h6 style="font-size:.875rem;font-weight:700;color:var(--slate-700);margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-clock" style="color:var(--blue-600)"></i>
+                Horaires généraux des médecins
+                <span style="font-size:.72rem;font-weight:400;color:var(--slate-500);margin-left:4px;">(synchronisés avec les dashboards médecin et gestionnaire)</span>
+              </h6>
+              <div class="adm-form-grid">
+                <div>
+                  <label class="adm-label">
+                    <i class="fas fa-play" style="color:var(--green-600);font-size:.75rem;margin-right:4px;"></i>
+                    Heure de début de travail
+                  </label>
+                  <input class="adm-input" type="time" name="medecin_heure_debut"
+                         value="<?= htmlspecialchars($hgOuv) ?>" required>
+                </div>
+                <div>
+                  <label class="adm-label">
+                    <i class="fas fa-stop" style="color:var(--red-500);font-size:.75rem;margin-right:4px;"></i>
+                    Heure de fin de travail
+                  </label>
+                  <input class="adm-input" type="time" name="medecin_heure_fin"
+                         value="<?= htmlspecialchars($hgFer) ?>" required>
+                </div>
+                <div>
+                  <label class="adm-label">
+                    <i class="fas fa-coffee" style="color:var(--amber-500,#f59e0b);font-size:.75rem;margin-right:4px;"></i>
+                    Début de pause (optionnel)
+                  </label>
+                  <input class="adm-input" type="time" name="medecin_pause_debut"
+                         value="<?= htmlspecialchars($hgPauD) ?>">
+                </div>
+                <div>
+                  <label class="adm-label">
+                    <i class="fas fa-coffee" style="color:var(--amber-500,#f59e0b);font-size:.75rem;margin-right:4px;"></i>
+                    Fin de pause (optionnel)
+                  </label>
+                  <input class="adm-input" type="time" name="medecin_pause_fin"
+                         value="<?= htmlspecialchars($hgPauF) ?>">
+                </div>
+                <div class="col-full">
+                  <p style="font-size:.78rem;color:var(--slate-500);margin-bottom:0;">
+                    <i class="fas fa-info-circle" style="color:var(--blue-400);margin-right:4px;"></i>
+                    Ces horaires définissent la plage de travail par défaut affichée sur les plannings des médecins et du gestionnaire.
+                    Laissez les champs de pause vides si les médecins n'ont pas de pause déjeuner commune.
+                  </p>
+                </div>
                 <div class="col-full">
                   <button type="submit" class="adm-btn adm-btn-primary">
                     <i class="fas fa-save"></i> Enregistrer

@@ -310,7 +310,7 @@ class MedecinModel
              WHERE c.sous_service_id = :ss
                AND c.medecin_id = :mid
                AND DATE(c.heure_passage_estimee) = CURDATE()
-               AND c.statut NOT IN ("annule", "absent")
+               AND c.statut != "annule"
              ORDER BY
                CASE WHEN c.statut IN ("en_cours","en_pause") THEN 0 ELSE 1 END ASC,
                c.priorite_retour DESC,
@@ -334,7 +334,7 @@ class MedecinModel
              WHERE c.sous_service_id = :ss
                AND c.medecin_id = :mid
                AND DATE(c.heure_passage_estimee) BETWEEN :date_debut AND :date_fin
-               AND c.statut NOT IN ("annule", "absent")
+               AND c.statut != "annule"
              ORDER BY c.heure_passage_estimee ASC'
         );
         $stmt->execute([
@@ -449,88 +449,12 @@ class MedecinModel
     }
 
     /**
-     * Marque absent automatiquement les consultations en_attente/confirme
-     * dont la précédente du même médecin s'est terminée il y a plus de 10 min,
-     * ET les consultations en_pause depuis plus de 30 min.
-     * Appelé depuis le controller lors de chaque refresh.
+     * ⚠️ Aucun mécanisme automatique ne doit changer le statut d'une
+     * consultation sans action humaine explicite. La fonction
+     * verifierAbsencesAuto() qui marquait "absent" tout seule (y compris
+     * après une pause prolongée) a été retirée pour cette raison : seul un
+     * clic du médecin (bouton "Absent") doit pouvoir produire ce changement.
      */
-    /**
-     * Marque "absent" le patient en tête de file de CE médecin si le délai
-     * raisonnable est dépassé après qu'il soit devenu disponible pour lui.
-     *
-     * ⚠️ Voir le commentaire équivalent dans GestionnaireModel::verifierAbsencesAuto
-     * pour le détail du bug corrigé : l'ancienne requête marquait absent TOUS
-     * les en_attente/confirme du médecin dès que 10 minutes s'étaient écoulées
-     * depuis sa DERNIÈRE consultation traitée — y compris une consultation
-     * qui venait juste d'être créée, jamais encore appelée. Une nouvelle
-     * consultation passait donc immédiatement en "absent" au rafraîchissement
-     * suivant. Désormais : seul le patient en tête de file (rang minimal)
-     * est concerné, seulement si le médecin n'a pas de consultation
-     * en_cours/en_pause en ce moment, et le délai démarre au plus tôt à la
-     * création du ticket du patient (jamais avant).
-     */
-    public function verifierAbsencesAuto(int $medecinId): int
-    {
-        $affected = 0;
-
-        $stmt = $this->db->prepare(
-            'UPDATE consultations c
-             JOIN (
-               SELECT
-                   (
-                       SELECT MAX(heure_fin_reelle)
-                       FROM consultations
-                       WHERE medecin_id = :mid1
-                         AND statut = "traite"
-                         AND CAST(heure_emission AS DATE) = CURDATE()
-                         AND heure_fin_reelle IS NOT NULL
-                   ) AS derniere_fin,
-                   (
-                       SELECT COUNT(*)
-                       FROM consultations
-                       WHERE medecin_id = :mid2
-                         AND statut IN ("en_cours", "en_pause")
-                         AND CAST(heure_emission AS DATE) = CURDATE()
-                   ) AS occupe_actuellement,
-                   (
-                       SELECT MIN(rang)
-                       FROM consultations
-                       WHERE medecin_id = :mid3
-                         AND statut IN ("en_attente", "confirme")
-                         AND CAST(heure_emission AS DATE) = CURDATE()
-                   ) AS rang_tete_de_file
-             ) etat ON etat.occupe_actuellement = 0
-                   AND etat.rang_tete_de_file IS NOT NULL
-                   AND c.rang = etat.rang_tete_de_file
-             SET c.statut = "absent"
-             WHERE c.medecin_id = :mid4
-               AND c.statut IN ("en_attente","confirme")
-               AND CAST(c.heure_emission AS DATE) = CURDATE()
-               AND c.heure_debut_reelle IS NULL
-               AND TIMESTAMPDIFF(
-                     MINUTE,
-                     GREATEST(COALESCE(etat.derniere_fin, c.heure_emission), c.heure_emission),
-                     NOW()
-                   ) >= 10'
-        );
-        $stmt->execute([':mid1' => $medecinId, ':mid2' => $medecinId, ':mid3' => $medecinId, ':mid4' => $medecinId]);
-        $affected += $stmt->rowCount();
-
-        // en_pause depuis plus de 30 minutes → absent (inchangé : se base sur
-        // l'heure de mise en pause de la consultation elle-même, pas de bug ici)
-        $stmt2 = $this->db->prepare(
-            'UPDATE consultations
-             SET statut = "absent"
-             WHERE medecin_id = :mid
-               AND statut = "en_pause"
-               AND heure_pause IS NOT NULL
-               AND TIMESTAMPDIFF(MINUTE, heure_pause, NOW()) >= 30'
-        );
-        $stmt2->execute([':mid' => $medecinId]);
-        $affected += $stmt2->rowCount();
-
-        return $affected;
-    }
 
     public function annulerConsultation(int $consultationId): bool
     {
@@ -862,31 +786,42 @@ class MedecinModel
     }
 
     /**
-     * Calcule l'heure de début estimée pour le prochain patient d'un jour donné.
-     * - 1er patient → debut = heure d'ouverture du service
-     * - Patient suivant → debut = heure_passage_estimee du dernier + duree_estimee du dernier
+     * Calcule l'heure de début estimée pour le prochain patient d'un jour donné,
+     * POUR UN MÉDECIN DONNÉ. Un sous-service pouvant compter plusieurs médecins
+     * travaillant en parallèle, chacun a sa propre file : la dernière
+     * consultation prise en compte pour le calcul doit donc être celle de ce
+     * médecin, pas celle de tout le sous-service (sinon le 2e médecin hériterait
+     * de l'heure de fin du 1er au lieu de démarrer lui aussi à l'heure d'ouverture).
+     * - 1er patient du médecin → debut = heure d'ouverture du service
+     * - Patient suivant du même médecin → debut = heure_passage_estimee du dernier + duree_estimee du dernier
      *
      * @return array{heure_debut: string, heure_fin: string}  (format 'Y-m-d H:i:s')
      */
-    public function calculerHeurePassageEstimee(int $ssId, string $date): array
+    public function calculerHeurePassageEstimee(int $ssId, string $date, int $medecinId = 0): array
     {
         $dureeEstimee = $this->getDureeEstimeeParSS($ssId);
 
-        // Horaires d'ouverture
+        // Horaires d'ouverture (communs à tous les médecins du sous-service)
         $horaires = $this->getServiceHoraires($ssId);
         $heureOuverture = $horaires['horaires_ouverture'] ?? '08:00:00';
 
-        // Dernière consultation planifiée ce jour
+        // Dernière consultation planifiée ce jour POUR CE MÉDECIN UNIQUEMENT
+        $conditionsMedecin = $medecinId > 0 ? ' AND medecin_id = :medecin_id' : ' AND medecin_id IS NULL';
         $stmt = $this->db->prepare(
             'SELECT heure_passage_estimee, heure_debut_reelle, duree_estimee
              FROM consultations
              WHERE sous_service_id = :ss
                AND DATE(heure_passage_estimee) = :date
-               AND statut NOT IN ("annule","absent")
-             ORDER BY heure_passage_estimee DESC
+               AND statut NOT IN ("annule","absent")'
+            . $conditionsMedecin .
+            ' ORDER BY heure_passage_estimee DESC
              LIMIT 1'
         );
-        $stmt->execute([':ss' => $ssId, ':date' => $date]);
+        $params = [':ss' => $ssId, ':date' => $date];
+        if ($medecinId > 0) {
+            $params[':medecin_id'] = $medecinId;
+        }
+        $stmt->execute($params);
         $last = $stmt->fetch();
 
         if ($last && $last['heure_passage_estimee']) {
@@ -983,9 +918,9 @@ class MedecinModel
         $stmtRang->execute([':ss' => $source['sous_service_id'], ':date' => $dateRdv]);
         $rang = (int)$stmtRang->fetchColumn();
 
-        // 4. Calculer les heures estimées selon la logique séquentielle
-        $heures = $this->calculerHeurePassageEstimee((int)$source['sous_service_id'], $dateRdv);
-        $heurePassage = $heures['heure_debut'];
+        // 4. Utiliser l'heure choisie par le médecin (format "HH:MM")
+        // On construit directement le datetime à partir de la date et l'heure sélectionnées.
+        $heurePassage = $dateRdv . ' ' . $heureRdv . ':00';
         $dureeEstimee = $this->getDureeEstimeeParSS((int)$source['sous_service_id']);
         $motifPropre  = !empty($motif) ? htmlspecialchars(trim($motif)) : 'Suivi';
 
@@ -1019,7 +954,7 @@ class MedecinModel
         $stmtLink->execute([':rdv' => $rdvId, ':id' => $consultationSourceId]);
 
         // 6. Mettre à jour / créer le créneau dans emplois_du_temps
-        $heureRdvPourEdt = date('H:i', strtotime($heurePassage));
+        $heureRdvPourEdt = $heureRdv; // Heure choisie par le médecin (HH:MM)
         $this->reserverCreneauEdt(
             (int)$source['sous_service_id'],
             (int)$source['medecin_id'],

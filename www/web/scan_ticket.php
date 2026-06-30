@@ -13,6 +13,8 @@ date_default_timezone_set('Africa/Douala');
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/models/QRCodeModel.php';
 require_once __DIR__ . '/models/TicketModel.php';
+require_once __DIR__ . '/models/GestionnaireModel.php';
+require_once __DIR__ . '/models/ConsultationModel.php';
 
 $token  = trim($_GET['token'] ?? '');
 $erreur = '';
@@ -84,38 +86,66 @@ if (!$erreur && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $patientId = (int)$patient['id'];
         }
 
-        // Calculer le rang et le temps d'attente
-        $ticketModel = new TicketModel();
-        $rang        = $ticketModel->calculerRang($qrCode['id']);
-        $dureeMin    = isset($qrCode['duree_estimee']) ? (int)round($qrCode['duree_estimee'] / 60) : 15;
-        $tempsAttente = $ticketModel->calculerTempsAttente($qrCode['id'], $dureeMin);
+        // Créer la VRAIE consultation dans la file d'attente, avec
+        // assignation automatique du médecin le moins chargé du sous-service.
+        // (Auparavant, le scan QR ne créait qu'un ticket sans consultation
+        // associée : le patient n'apparaissait alors jamais dans la file du
+        // gestionnaire ni chez un médecin, et aucune règle de répartition ne
+        // s'appliquait.)
+        $gestionnaireModel = new GestionnaireModel();
+        $consultationId = null;
+        try {
+            $consultationId = $gestionnaireModel->enregistrerConsultationManuelle([
+                'sous_service_id' => $qrCode['sous_service_id'],
+                'patient_id'      => $patientId,
+                'mode_prise'      => 'QR_CODE',
+                'qr_code_id'      => $qrCode['id'],
+            ]);
+        } catch (\Throwable $e) {
+            $consultationId = 0;
+            $erreurs['global'] = $e->getMessage() ?: 'Impossible de créer le ticket pour le moment. Veuillez réessayer.';
+        }
 
-        $heureDebut = date('Y-m-d H:i:s', strtotime("+{$tempsAttente} minutes"));
-        $heureFin   = date('Y-m-d H:i:s', strtotime('+' . ($tempsAttente + $dureeMin) . ' minutes'));
-
-        $ticketId = $ticketModel->creer([
-            'patient_id'          => $patientId,
-            'qr_code_id'          => $qrCode['id'],
-            'consultation_id'     => null,
-            'rang'                => $rang,
-            'heure_creation'      => date('Y-m-d H:i:s'),
-            'heure_debut_estimee' => $heureDebut,
-            'heure_fin_estimee'   => $heureFin,
-            'temps_attente_minutes' => $tempsAttente,
-            'statut'              => 'en_attente',
-        ]);
-
-        if ($ticketId) {
-            // Incrémenter le compteur de scans
-            $qrModel->incrementScanCount($qrCode['id']);
-
-            $ticket  = $ticketModel->obtenirParId($ticketId);
-            $success = true;
-
-            // Stocker en session pour rafraîchissement
-            $_SESSION['last_ticket_id'] = $ticketId;
+        if (!$consultationId) {
+            if (empty($erreurs['global'])) {
+                $erreurs['global'] = 'Aucun médecin disponible n\'est affecté à ce service pour le moment. Veuillez vous présenter à l\'accueil.';
+            }
         } else {
-            $erreurs['global'] = 'Erreur lors de la création du ticket. Veuillez réessayer.';
+            // Récupérer le rang et le temps d'attente réels de la consultation créée
+            $consultationModel = new ConsultationModel();
+            $consultationCreee = $consultationModel->findById($consultationId);
+
+            $rang        = (int)($consultationCreee['rang'] ?? 1);
+            $dureeMin    = isset($qrCode['duree_estimee']) ? (int)round($qrCode['duree_estimee'] / 60) : 15;
+            $heureDebut  = $consultationCreee['heure_passage_estimee'] ?? date('Y-m-d H:i:s', strtotime("+{$dureeMin} minutes"));
+            $heureFin    = date('Y-m-d H:i:s', strtotime($heureDebut) + ($dureeMin * 60));
+            $tempsAttente = max(0, (int)round((strtotime($heureDebut) - time()) / 60));
+
+            $ticketModel = new TicketModel();
+            $ticketId = $ticketModel->creer([
+                'patient_id'          => $patientId,
+                'qr_code_id'          => $qrCode['id'],
+                'consultation_id'     => $consultationId,
+                'rang'                => $rang,
+                'heure_creation'      => date('Y-m-d H:i:s'),
+                'heure_debut_estimee' => $heureDebut,
+                'heure_fin_estimee'   => $heureFin,
+                'temps_attente_minutes' => $tempsAttente,
+                'statut'              => 'en_attente',
+            ]);
+
+            if ($ticketId) {
+                // Incrémenter le compteur de scans
+                $qrModel->incrementScanCount($qrCode['id']);
+
+                $ticket  = $ticketModel->obtenirParId($ticketId);
+                $success = true;
+
+                // Stocker en session pour rafraîchissement
+                $_SESSION['last_ticket_id'] = $ticketId;
+            } else {
+                $erreurs['global'] = 'Erreur lors de la création du ticket. Veuillez réessayer.';
+            }
         }
     }
 }

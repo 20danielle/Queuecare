@@ -813,7 +813,6 @@ unset($_SESSION['type_message']);
             const mins = Math.floor(f.secondes_en_pause/60);
             const secsRest = f.secondes_en_pause % 60;
             pauseInfo = `<br><small style="color:#b45309;font-size:.72rem;"><i class="fa-solid fa-clock"></i> Parti depuis ${mins}min ${secsRest}s — retour attendu${f.motif_pause?' ('+escapeHtml(f.motif_pause)+')':''}</small>`;
-            if(f.secondes_en_pause >= 1500) pauseInfo += `<br><small style="color:#dc2626;font-weight:600;font-size:.72rem;"><i class="fa-solid fa-triangle-exclamation"></i> ${Math.floor((1800-f.secondes_en_pause)/60)}min avant absence auto</small>`;
         }
         if(isPauseRetourG) {
             pauseInfo += `<br><span style="display:inline-flex;align-items:center;gap:4px;background:#0052a0;color:white;font-size:.68rem;font-weight:700;border-radius:20px;padding:2px 8px;margin-top:3px;"><i class="fa-solid fa-bell"></i> Médecin averti</span>`;

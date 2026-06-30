@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1:3306
--- Généré le : ven. 26 juin 2026 à 08:30
+-- Généré le : lun. 29 juin 2026 à 19:21
 -- Version du serveur : 8.0.31
 -- Version de PHP : 8.0.26
 
@@ -233,7 +233,7 @@ CREATE TABLE IF NOT EXISTS `consultations` (
   KEY `idx_consult_emission` (`heure_emission`),
   KEY `idx_consult_rang` (`sous_service_id`,`rang`),
   KEY `idx_consult_qrcode` (`qr_code_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=77 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Consultations des patients (remplace rendez_vous)';
+) ENGINE=InnoDB AUTO_INCREMENT=91 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Consultations des patients (remplace rendez_vous)';
 
 --
 -- Déchargement des données de la table `consultations`
@@ -315,7 +315,21 @@ INSERT INTO `consultations` (`id`, `patient_id`, `sous_service_id`, `medecin_id`
 (73, 21, 3, 1, NULL, NULL, 'absent', 6, 'PLACE', '2026-06-25 21:08:28', '2026-06-25 15:02:59', NULL, NULL, NULL, NULL, 0, 0, 1094, NULL, NULL, '2026-06-25 21:08:28'),
 (74, 21, 3, 1, NULL, NULL, 'traite', 7, 'PLACE', '2026-06-25 21:14:57', '2026-06-25 15:02:59', '2026-06-25 21:15:13', '2026-06-25 21:16:32', NULL, NULL, 0, 0, 1094, NULL, 75, '2026-06-25 21:14:57'),
 (75, 21, 3, 1, NULL, NULL, 'absent', 1, 'MANUEL', '2026-06-25 21:15:37', '2026-06-26 08:00:00', NULL, NULL, NULL, NULL, 0, 0, 2491, 'Suivi', NULL, '2026-06-25 21:15:37'),
-(76, 11, 3, 1, NULL, NULL, 'annule', 1, 'PLACE', '2026-06-26 09:25:32', '2026-06-26 09:25:32', NULL, NULL, NULL, NULL, 0, 0, 1359, NULL, NULL, '2026-06-26 09:25:32');
+(76, 11, 3, 1, NULL, NULL, 'annule', 1, 'PLACE', '2026-06-26 09:25:32', '2026-06-26 09:25:32', NULL, NULL, NULL, NULL, 0, 0, 1359, NULL, NULL, '2026-06-26 09:25:32'),
+(77, 1, 3, 1, NULL, NULL, 'traite', 2, 'PLACE', '2026-06-26 09:54:11', '2026-06-26 09:54:11', '2026-06-26 09:55:38', '2026-06-26 10:44:34', NULL, NULL, 0, 0, 1359, NULL, NULL, '2026-06-26 09:54:11'),
+(78, 7, 3, 3, NULL, NULL, 'en_cours', 3, 'PLACE', '2026-06-26 09:54:23', '2026-06-26 10:16:50', '2026-06-26 09:57:28', NULL, NULL, NULL, 774, 0, 1359, NULL, NULL, '2026-06-26 09:54:23'),
+(79, 21, 3, 1, NULL, NULL, 'traite', 4, 'PLACE', '2026-06-26 09:54:38', '2026-06-26 10:39:29', '2026-06-26 10:44:39', '2026-06-26 10:58:24', NULL, NULL, 0, 0, 1359, NULL, NULL, '2026-06-26 09:54:38'),
+(80, 18, 3, 3, NULL, NULL, 'traite', 5, 'PLACE', '2026-06-26 09:54:57', '2026-06-26 11:02:08', '2026-06-26 10:44:58', '2026-06-26 10:57:39', NULL, NULL, 0, 0, 1359, NULL, NULL, '2026-06-26 09:54:57'),
+(81, 7, 3, 1, NULL, NULL, 'traite', 1, 'PLACE', '2026-06-29 18:40:08', '2026-06-29 18:40:08', '2026-06-29 18:52:58', '2026-06-29 18:59:47', NULL, NULL, 0, 0, 1507, NULL, NULL, '2026-06-29 18:40:08'),
+(82, 11, 3, 3, NULL, NULL, 'traite', 2, 'PLACE', '2026-06-29 18:40:21', '2026-06-29 19:05:15', '2026-06-29 18:58:00', '2026-06-29 18:59:38', NULL, NULL, 0, 0, 1507, NULL, 83, '2026-06-29 18:40:21'),
+(83, 11, 3, 3, NULL, NULL, 'absent', 1, 'MANUEL', '2026-06-29 18:59:02', '2026-06-30 08:00:00', NULL, NULL, NULL, NULL, 0, 0, 2323, 'Suivi', NULL, '2026-06-29 18:59:02'),
+(84, 20, 3, 1, NULL, NULL, 'absent', 3, 'PLACE', '2026-06-29 19:08:34', '2026-06-29 19:18:05', NULL, NULL, NULL, NULL, 0, 0, 1507, NULL, NULL, '2026-06-29 19:08:34'),
+(85, 21, 3, 1, NULL, NULL, 'absent', 4, 'PLACE', '2026-06-29 19:08:47', '2026-06-29 19:43:12', NULL, NULL, NULL, NULL, 0, 0, 1507, NULL, NULL, '2026-06-29 19:08:47'),
+(86, 18, 3, 3, NULL, NULL, 'absent', 5, 'PLACE', '2026-06-29 19:09:20', '2026-06-29 19:23:07', NULL, NULL, NULL, NULL, 0, 0, 1507, NULL, NULL, '2026-06-29 19:09:20'),
+(87, 3, 3, 1, NULL, NULL, 'absent', 6, 'MANUEL', '2026-06-29 19:53:11', '2026-06-29 19:18:05', NULL, NULL, NULL, NULL, 0, 0, 1507, NULL, NULL, '2026-06-29 19:53:11'),
+(88, 2, 3, 3, NULL, NULL, 'absent', 7, 'MANUEL', '2026-06-29 19:53:27', '2026-06-29 19:23:07', NULL, NULL, NULL, NULL, 0, 0, 1507, NULL, NULL, '2026-06-29 19:53:27'),
+(89, 2, 3, 1, NULL, NULL, 'en_attente', 8, 'MANUEL', '2026-06-29 20:19:49', '2026-06-29 19:18:05', NULL, NULL, NULL, NULL, 0, 0, 1507, NULL, NULL, '2026-06-29 20:19:49'),
+(90, 3, 3, 3, NULL, NULL, 'en_attente', 9, 'MANUEL', '2026-06-29 20:20:07', '2026-06-29 19:23:07', NULL, NULL, NULL, NULL, 0, 0, 1507, NULL, NULL, '2026-06-29 20:20:07');
 
 --
 -- Déclencheurs `consultations`
@@ -401,7 +415,7 @@ CREATE TABLE IF NOT EXISTS `emplois_du_temps` (
   KEY `idx_edt_ss` (`sous_service_id`),
   KEY `idx_edt_medecin` (`medecin_id`),
   KEY `idx_edt_jour` (`jour`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Planning journalier des sous-services par médecin';
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Planning journalier des sous-services par médecin';
 
 --
 -- Déchargement des données de la table `emplois_du_temps`
@@ -413,7 +427,8 @@ INSERT INTO `emplois_du_temps` (`id`, `sous_service_id`, `medecin_id`, `jour`, `
 (3, 3, 1, '2026-06-23', '08:00:00', '09:00:00', 1, '2026-06-22 22:09:36'),
 (4, 3, 1, '2026-06-24', '12:00:00', '13:00:00', 1, '2026-06-22 22:21:39'),
 (5, 3, 1, '2026-06-25', '09:00:00', '10:00:00', 1, '2026-06-23 19:33:51'),
-(6, 3, 1, '2026-06-26', '08:00:00', '09:00:00', 2, '2026-06-24 20:48:49');
+(6, 3, 1, '2026-06-26', '08:00:00', '09:00:00', 2, '2026-06-24 20:48:49'),
+(7, 3, 3, '2026-06-30', '08:00:00', '09:00:00', 1, '2026-06-29 18:59:02');
 
 -- --------------------------------------------------------
 
@@ -495,7 +510,7 @@ CREATE TABLE IF NOT EXISTS `historique_durees` (
   KEY `idx_hist_consultation` (`consultation_id`),
   KEY `idx_hist_medecin` (`medecin_id`),
   KEY `idx_hist_created` (`created_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=39 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Historique des durées réelles — base du recalcul nocturne';
+) ENGINE=InnoDB AUTO_INCREMENT=44 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Historique des durées réelles — base du recalcul nocturne';
 
 --
 -- Déchargement des données de la table `historique_durees`
@@ -530,7 +545,12 @@ INSERT INTO `historique_durees` (`id`, `sous_service_id`, `consultation_id`, `me
 (35, 3, 70, 1, 960, '2026-06-25 14:28:56', 5, 14, 0, '2026-06-25 14:44:56'),
 (36, 3, 71, 3, 2916, '2026-06-25 14:40:54', 5, 14, 0, '2026-06-25 15:29:30'),
 (37, 3, 72, 1, 2699, '2026-06-25 14:44:45', 5, 14, 0, '2026-06-25 15:29:44'),
-(38, 3, 74, 1, 79, '2026-06-25 21:15:13', 5, 21, 0, '2026-06-25 21:16:32');
+(38, 3, 74, 1, 79, '2026-06-25 21:15:13', 5, 21, 0, '2026-06-25 21:16:32'),
+(39, 3, 77, 1, 2936, '2026-06-26 09:55:38', 6, 9, 0, '2026-06-26 10:44:34'),
+(40, 3, 80, 3, 761, '2026-06-26 10:44:58', 6, 10, 0, '2026-06-26 10:57:39'),
+(41, 3, 79, 1, 825, '2026-06-26 10:44:39', 6, 10, 0, '2026-06-26 10:58:24'),
+(42, 3, 82, 3, 98, '2026-06-29 18:58:00', 2, 18, 0, '2026-06-29 18:59:38'),
+(43, 3, 81, 1, 409, '2026-06-29 18:52:58', 2, 18, 0, '2026-06-29 18:59:47');
 
 --
 -- Déclencheurs `historique_durees`
@@ -599,7 +619,7 @@ CREATE TABLE IF NOT EXISTS `logs_estimation` (
   PRIMARY KEY (`id`),
   KEY `idx_logs_ss` (`sous_service_id`),
   KEY `idx_logs_date` (`date_calcul`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Traçabilité des recalculs nocturnes de la moyenne pondérée';
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Traçabilité des recalculs nocturnes de la moyenne pondérée';
 
 --
 -- Déchargement des données de la table `logs_estimation`
@@ -607,7 +627,8 @@ CREATE TABLE IF NOT EXISTS `logs_estimation` (
 
 INSERT INTO `logs_estimation` (`id`, `sous_service_id`, `date_calcul`, `nb_observations`, `ancienne_duree`, `nouvelle_duree`, `created_at`) VALUES
 (1, 3, '2026-06-25', 9, 1800, 1094, '2026-06-25 12:07:30'),
-(2, 3, '2026-06-26', 6, 1094, 1359, '2026-06-26 07:08:24');
+(2, 3, '2026-06-26', 6, 1094, 1359, '2026-06-26 07:08:24'),
+(3, 3, '2026-06-27', 3, 1359, 1507, '2026-06-27 14:15:32');
 
 -- --------------------------------------------------------
 
@@ -842,7 +863,7 @@ CREATE TABLE IF NOT EXISTS `qr_codes` (
   KEY `idx_qrcodes_statut` (`statut`),
   KEY `idx_qrcodes_expire_at` (`expire_at`),
   KEY `idx_qrcodes_created_by` (`created_by`)
-) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='QR codes générés pour les sous-services';
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='QR codes générés pour les sous-services';
 
 --
 -- Déchargement des données de la table `qr_codes`
@@ -860,7 +881,9 @@ INSERT INTO `qr_codes` (`id`, `sous_service_id`, `token`, `qr_code_path`, `expir
 (10, 3, '531ddf80a10db66bc28d3be88c3899dfaf044fb47efe2b299f18334eb610bbdf', 'public/qrcodes/qrcode_3_1782283860.png', '2026-06-24 08:11:00', 'http://localhost/fil-attente3/scan_ticket.php?token=531ddf80a10db66bc28d3be88c3899dfaf044fb47efe2b299f18334eb610bbdf', 0, 'expire', '2026-06-24 07:51:01', 1),
 (11, 3, '8231a3c73fc72092c594e373e2e15faa80a9015de6f3bcf157a0b6cb2d5b9b40', 'public/qrcodes/qrcode_3_1782296561.png', '2026-06-24 11:42:41', 'http://localhost/fil-attente3/scan_ticket.php?token=8231a3c73fc72092c594e373e2e15faa80a9015de6f3bcf157a0b6cb2d5b9b40', 0, 'expire', '2026-06-24 11:22:42', 1),
 (12, 3, '278f208052e13036fed2af755921817ef923cdeebc5912a4357a4fed3914434b', 'public/qrcodes/qrcode_3_1782332853.png', '2026-06-24 21:47:33', 'http://localhost/fil-attente2/scan_ticket.php?token=278f208052e13036fed2af755921817ef923cdeebc5912a4357a4fed3914434b', 0, 'expire', '2026-06-24 21:27:34', 1),
-(13, 3, '017f3473d140e4024a73077b70f1ff3ef55b2f90904ecdc8ea5349effcca0ba5', 'public/qrcodes/qrcode_3_1782412967.png', '2026-06-25 20:02:47', 'http://localhost/fil-attente2/scan_ticket.php?token=017f3473d140e4024a73077b70f1ff3ef55b2f90904ecdc8ea5349effcca0ba5', 0, 'expire', '2026-06-25 19:42:48', 1);
+(13, 3, '017f3473d140e4024a73077b70f1ff3ef55b2f90904ecdc8ea5349effcca0ba5', 'public/qrcodes/qrcode_3_1782412967.png', '2026-06-25 20:02:47', 'http://localhost/fil-attente2/scan_ticket.php?token=017f3473d140e4024a73077b70f1ff3ef55b2f90904ecdc8ea5349effcca0ba5', 0, 'expire', '2026-06-25 19:42:48', 1),
+(14, 3, '268f58ea74802af7e1cae80632bc5e861cb8fd33edf84d26a80504b46aa1fe2d', 'public/qrcodes/qrcode_3_1782462854.png', '2026-06-26 09:54:14', 'http://localhost/fil-attente2/scan_ticket.php?token=268f58ea74802af7e1cae80632bc5e861cb8fd33edf84d26a80504b46aa1fe2d', 0, 'expire', '2026-06-26 09:34:15', 1),
+(15, 3, 'c07716987bc6095ca553a0968d32bd607031fb68514e62d58382de46956214a9', 'public/qrcodes/qrcode_3_1782759168.png', '2026-06-29 20:12:48', 'http://localhost/fil-attente2/scan_ticket.php?token=c07716987bc6095ca553a0968d32bd607031fb68514e62d58382de46956214a9', 0, 'actif', '2026-06-29 19:52:49', 1);
 
 -- --------------------------------------------------------
 
@@ -944,7 +967,7 @@ CREATE TABLE IF NOT EXISTS `sous_services` (
 --
 
 INSERT INTO `sous_services` (`id`, `service_id`, `nom`, `description`, `duree_rdv_defaut`, `duree_estimee`, `capacite_horaire`, `qr_code`, `qr_expire_at`, `statut`, `created_at`) VALUES
-(3, 1, 'Cardiologie', 'Pour tout problème lié au coeur, consultez le service de cardiologie', 1800, 1359, 10, NULL, NULL, 'actif', '2026-06-04 11:54:36'),
+(3, 1, 'Cardiologie', 'Pour tout problème lié au coeur, consultez le service de cardiologie', 1800, 1507, 10, NULL, NULL, 'actif', '2026-06-04 11:54:36'),
 (4, 1, 'Hématologie', 'Pour les problèmes liés au sang', 1800, 1800, 2, NULL, NULL, 'actif', '2026-06-16 19:27:25');
 
 -- --------------------------------------------------------
@@ -1023,10 +1046,10 @@ CREATE TABLE IF NOT EXISTS `utilisateurs` (
 --
 
 INSERT INTO `utilisateurs` (`id`, `email`, `nom`, `mot_de_passe`, `role`, `medecin_id`, `gestionnaire_id`, `statut`, `derniere_connexion`, `created_at`, `created_by`, `langue`) VALUES
-(1, 'ebelemagloire@gmail.com', 'Dr Ebele Magloire', '$2y$10$81j7JUKeiB4rzCNlyy5J5ubwvbuwQR3gRf9fNP73P.5S0apOk3Nfa', 'admin', 2, NULL, 'actif', '2026-06-26 09:13:17', '2026-06-03 13:50:03', NULL, 'fr'),
-(2, 'mathildemoumi@gmail.com', 'MOUMI MATHILDE', '$2y$10$.2Mi3klTmw5xVzFvxU4H8.3a/r9OZeb4VmsKAY0qkhwXHCxiwHesG', 'medecin', 1, NULL, 'actif', '2026-06-26 09:08:33', '2026-06-04 10:56:31', NULL, 'fr'),
-(3, 'angezutchi@gmail.com', 'ange zutchi', '$2y$10$45/tkoftsgWhyTyer5W/aOqM3aPb8u7gXRgx2FlvysV8lOX.2Kqsy', 'gestionnaire', NULL, 1, 'actif', '2026-06-26 09:25:18', '2026-06-04 11:25:18', NULL, 'fr'),
-(4, 'neillmoumi@gmail.com', 'NEILL MOUMI', '$2y$10$w9q6PnVR08/ZBRIttd60FuW4n.oidPlzLbmivb3FgIKEyJIxLkL6W', 'medecin', 3, NULL, 'actif', '2026-06-25 21:29:03', '2026-06-24 06:16:01', NULL, 'fr');
+(1, 'ebelemagloire@gmail.com', 'Dr Ebele Magloire', '$2y$10$81j7JUKeiB4rzCNlyy5J5ubwvbuwQR3gRf9fNP73P.5S0apOk3Nfa', 'admin', 2, NULL, 'actif', '2026-06-29 19:01:57', '2026-06-03 13:50:03', NULL, 'fr'),
+(2, 'mathildemoumi@gmail.com', 'MOUMI MATHILDE', '$2y$10$.2Mi3klTmw5xVzFvxU4H8.3a/r9OZeb4VmsKAY0qkhwXHCxiwHesG', 'medecin', 1, NULL, 'actif', '2026-06-29 20:18:54', '2026-06-04 10:56:31', NULL, 'fr'),
+(3, 'angezutchi@gmail.com', 'ange zutchi', '$2y$10$45/tkoftsgWhyTyer5W/aOqM3aPb8u7gXRgx2FlvysV8lOX.2Kqsy', 'gestionnaire', NULL, 1, 'actif', '2026-06-29 20:18:45', '2026-06-04 11:25:18', NULL, 'fr'),
+(4, 'neillmoumi@gmail.com', 'NEILL MOUMI', '$2y$10$w9q6PnVR08/ZBRIttd60FuW4n.oidPlzLbmivb3FgIKEyJIxLkL6W', 'medecin', 3, NULL, 'actif', '2026-06-29 20:19:03', '2026-06-24 06:16:01', NULL, 'fr');
 
 -- --------------------------------------------------------
 
@@ -1266,35 +1289,6 @@ CREATE DEFINER=`root`@`localhost` EVENT `event_expire_qrcodes` ON SCHEDULE EVERY
     SET statut = 'expire' 
     WHERE expire_at <= NOW() 
       AND statut = 'actif';
-END$$
-
-DROP EVENT IF EXISTS `event_absence_auto`$$
-CREATE DEFINER=`root`@`localhost` EVENT `event_absence_auto` ON SCHEDULE EVERY 1 MINUTE STARTS '2026-06-08 11:05:50' ON COMPLETION PRESERVE ENABLE DO BEGIN
-
-  -- Cas 1 : patient en_attente ou confirme non démarré
-  --         10 minutes après la fin de la consultation précédente → absent
-  UPDATE consultations c
-  JOIN (
-    SELECT sous_service_id, medecin_id, MAX(heure_fin_reelle) AS derniere_fin
-    FROM consultations
-    WHERE statut = 'traite'
-      AND CAST(heure_emission AS DATE) = CURDATE()
-      AND heure_fin_reelle IS NOT NULL
-    GROUP BY sous_service_id, medecin_id
-  ) fin
-    ON  fin.sous_service_id = c.sous_service_id
-    AND fin.medecin_id      = c.medecin_id
-  SET c.statut = 'absent'
-  WHERE c.statut IN ('en_attente', 'confirme')
-    AND CAST(c.heure_emission AS DATE) = CURDATE()
-    AND c.heure_debut_reelle IS NULL
-    AND fin.derniere_fin IS NOT NULL
-    AND TIMESTAMPDIFF(MINUTE, fin.derniere_fin, NOW()) >= 10;
-
-  -- Cas 2 (retiré) : un patient en pause pour un examen externe peut
-  -- légitimement revenir après plus de 30 minutes ; il n'est donc plus
-  -- jamais marqué "absent" automatiquement pendant sa pause.
-
 END$$
 
 DROP EVENT IF EXISTS `event_recalcul_duree_estimee`$$

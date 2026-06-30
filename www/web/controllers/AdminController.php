@@ -31,12 +31,13 @@ class AdminController {
     public function afficherDashboard(): void {
         AuthHelper::exigerRole('admin');
 
-        $hopital       = $this->hopitalModel->getData();
-        $gestionnaires = $this->utilisateurModel->listerParRole('gestionnaire');
-        $medecins      = $this->utilisateurModel->listerParRole('medecin');
-        $sousServices  = $this->serviceModel->getSousServicesParService(1);
-        $setupDone     = isset($_GET['setup']);
-        $nouveauUser   = $_SESSION['nouveau_utilisateur'] ?? null;
+        $hopital         = $this->hopitalModel->getData();
+        $horairesGeneraux = $this->hopitalModel->getHorairesGeneraux();
+        $gestionnaires   = $this->utilisateurModel->listerParRole('gestionnaire');
+        $medecins        = $this->utilisateurModel->listerParRole('medecin');
+        $sousServices    = $this->serviceModel->getSousServicesParService(1);
+        $setupDone       = isset($_GET['setup']);
+        $nouveauUser     = $_SESSION['nouveau_utilisateur'] ?? null;
         unset($_SESSION['nouveau_utilisateur']);
 
         include __DIR__ . '/../views/admin/dashboard.php';
@@ -79,6 +80,27 @@ class AdminController {
         }
 
         $ok = $this->hopitalModel->sauvegarder($data);
+
+        // Sauvegarder les horaires généraux des médecins dans services (id=1)
+        // Ces valeurs sont lues automatiquement par les dashboards médecin et gestionnaire.
+        $heureDebut  = trim($_POST['medecin_heure_debut']  ?? '08:00');
+        $heureFin    = trim($_POST['medecin_heure_fin']    ?? '18:00');
+        $pauseDebut  = trim($_POST['medecin_pause_debut']  ?? '');
+        $pauseFin    = trim($_POST['medecin_pause_fin']    ?? '');
+
+        // Validation basique du format HH:MM
+        $validHeure = static function (string $h): bool {
+            return (bool) preg_match('/^\d{2}:\d{2}$/', $h);
+        };
+        if ($validHeure($heureDebut) && $validHeure($heureFin)) {
+            $this->hopitalModel->sauvegarderHorairesGeneraux(
+                $heureDebut,
+                $heureFin,
+                ($validHeure($pauseDebut) ? $pauseDebut : null),
+                ($validHeure($pauseFin)   ? $pauseFin   : null)
+            );
+        }
+
         header('Location: admin.php?tab=hopital&' . ($ok ? 'success=hopital_sauvegarde' : 'error=sauvegarde_echouee'));
         exit;
     }

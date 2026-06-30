@@ -149,6 +149,7 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
         .gcal-event.ev-cours { background:#bbf7d0; border-left:3px solid #10b981; color:#064e3b; }
         .gcal-event.ev-traite { background:#e2e8f0; border-left:3px solid #94a3b8; color:#475569; opacity:.85; }
         .gcal-event.ev-pause { background:#fde68a; border-left:3px solid #f59e0b; color:#78350f; }
+        .gcal-event.ev-absent { background:#fecaca; border-left:3px solid #ef4444; color:#7f1d1d; opacity:.9; }
         .gcal-event-time { font-weight:700; font-size:.62rem; white-space:nowrap; }
         .gcal-event-name { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .gcal-event-badge { display:inline-block; font-size:.58rem; font-weight:700; padding:1px 5px; border-radius:8px; margin-top:2px; background:rgba(255,255,255,.55); }
@@ -513,8 +514,8 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
                                         $bc = match($c['statut']) { 
                                             'traite' => 'badge-success', 
                                             'en_cours' => 'badge-info', 
-                                            'annule' => 'badge-danger', 
-                                            'absent' => 'badge-warning', 
+                                            'annule' => 'badge-secondary', 
+                                            'absent' => 'badge-danger', 
                                             default => 'badge-secondary' 
                                         }; 
                                         $lb = match($c['statut']) { 
@@ -855,7 +856,7 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
         let h = bandeauPrioritaire + '<div style="overflow-x:auto;"><table class="med-table"><thead><tr><th>#</th><th>Patient</th><th>Téléphone</th><th>Heure prévue</th><th>Heure début</th><th>Heure fin</th><th>Statut</th><th>Action</th></tr></thead><tbody>';
         for(const v of page) {
             const isPauseRetour = v.statut === 'en_pause' && v.priorite_retour;
-            const bc = v.statut === 'traite' ? 'badge-success' : (v.statut === 'en_cours' ? 'badge-info' : (v.statut === 'annule' ? 'badge-danger' : (v.statut === 'absent' ? 'badge-warning' : (v.statut === 'en_pause' ? 'badge-pause' : 'badge-secondary'))));
+            const bc = v.statut === 'traite' ? 'badge-success' : (v.statut === 'en_cours' ? 'badge-info' : (v.statut === 'annule' ? 'badge-secondary' : (v.statut === 'absent' ? 'badge-danger' : (v.statut === 'en_pause' ? 'badge-pause' : 'badge-secondary'))));
             const lb = v.statut === 'traite' ? 'Traitée' : (v.statut === 'en_cours' ? 'En cours' : (v.statut === 'annule' ? 'Annulée' : (v.statut === 'absent' ? 'Absent' : (v.statut === 'en_pause' ? '⏸ En pause' : (v.statut === 'en_attente' ? 'En attente' : 'Confirmé')))));
             // Sous-info pause
             let pauseDetail = '';
@@ -863,7 +864,6 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
                 const mins = Math.floor(v.secondes_en_pause/60);
                 const secs = v.secondes_en_pause % 60;
                 pauseDetail = `<br><small style="color:#b45309;font-size:.7rem;"><i class="fa-solid fa-clock"></i> Parti depuis ${mins}min ${secs}s${v.motif_pause?' — '+escapeHtml(v.motif_pause):''}</small>`;
-                if(v.secondes_en_pause >= 1500) pauseDetail += `<br><small style="color:#dc2626;font-weight:600;font-size:.7rem;">⚠ ${Math.floor((1800-v.secondes_en_pause)/60)}min avant absence auto</small>`;
             }
             if(isPauseRetour) {
                 pauseDetail += `<br><span style="display:inline-flex;align-items:center;gap:4px;background:#0052a0;color:white;font-size:.68rem;font-weight:700;border-radius:20px;padding:2px 8px;margin-top:3px;"><i class="fa-solid fa-star"></i> Priorité retour examen</span>`;
@@ -1313,8 +1313,8 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
                     const cons=(consIndex[key]||[]);
                     if(cons.length>0){
                         cons.forEach(c=>{
-                            const evCls=c.statut==='en_cours'?'ev-cours':(c.statut==='traite'?'ev-traite':(c.statut==='en_pause'?'ev-pause':'ev-attente'));
-                            const badge=c.statut==='en_cours'?'En cours':(c.statut==='traite'?'Traité':(c.statut==='en_pause'?'En pause':'Programmé'));
+                            const evCls=c.statut==='en_cours'?'ev-cours':(c.statut==='traite'?'ev-traite':(c.statut==='en_pause'?'ev-pause':(c.statut==='absent'?'ev-absent':'ev-attente')));
+                            const badge=c.statut==='en_cours'?'En cours':(c.statut==='traite'?'Traité':(c.statut==='en_pause'?'En pause':(c.statut==='absent'?'Absent':'Programmé')));
                             const hDebut = c.heure_debut || heure;
                             const hFin   = c.heure_fin   || '';
                             const plage  = hFin ? `${hDebut} – ${hFin}` : hDebut;
@@ -1776,8 +1776,8 @@ function dessinerChartTempsAttente(evolution, ssNom) {
                style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.88rem;font-family:inherit;box-sizing:border-box;margin-bottom:20px;"
                onkeydown="if(event.key==='Enter') confirmerPause()">
         <p style="font-size:.78rem;color:#94a3b8;margin-bottom:16px;">
-            <i class="fa-solid fa-triangle-exclamation" style="color:#f59e0b;"></i>
-            Si le patient ne revient pas dans <strong>30 minutes</strong>, il sera automatiquement marqué absent.
+            <i class="fa-solid fa-circle-info" style="color:#3b82f6;"></i>
+            Le patient restera "en pause" jusqu'à ce que vous le repreniez ou le marquiez absent manuellement.
         </p>
         <div style="display:flex;gap:10px;justify-content:flex-end;">
             <button onclick="fermerModalPause()" style="padding:9px 18px;background:#f1f5f9;border:none;border-radius:8px;cursor:pointer;font-size:.85rem;font-family:inherit;color:#475569;">Annuler</button>

@@ -5,6 +5,10 @@
  * Schéma réel :
  *   id, nom_hopital, adresse, telephone, email, logo_path,
  *   setup_completed (tinyint), date_installation, date_mise_a_jour
+ *
+ * Les horaires généraux des médecins (ouverture, fermeture, pause) sont
+ * stockés dans la table `services` (id = 1) et lus depuis là par les
+ * dashboards médecin et gestionnaire via ServiceModel/MedecinModel.
  */
 
 require_once __DIR__ . '/../config/database.php';
@@ -35,6 +39,67 @@ class HopitalModel {
     public function getData() {
         $stmt = $this->db->query("SELECT * FROM configuration_hopital LIMIT 1");
         return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Récupère les horaires généraux des médecins depuis la table services (id=1).
+     * C'est la source de vérité partagée avec les dashboards médecin et gestionnaire.
+     *
+     * @return array
+     */
+    public function getHorairesGeneraux(): array {
+        $stmt = $this->db->query(
+            "SELECT horaires_ouverture, horaires_fermeture, pause_debut, pause_fin
+             FROM services WHERE id = 1 LIMIT 1"
+        );
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: [
+            'horaires_ouverture' => '08:00:00',
+            'horaires_fermeture' => '18:00:00',
+            'pause_debut'        => null,
+            'pause_fin'          => null,
+        ];
+    }
+
+    /**
+     * Met à jour les horaires généraux des médecins dans la table services (id=1).
+     * Les dashboards médecin et gestionnaire liront automatiquement ces nouvelles valeurs.
+     *
+     * @param string      $heureDebut   Format HH:MM
+     * @param string      $heureFin     Format HH:MM
+     * @param string|null $pauseDebut   Format HH:MM ou null
+     * @param string|null $pauseFin     Format HH:MM ou null
+     * @return bool
+     */
+    public function sauvegarderHorairesGeneraux(
+        string $heureDebut,
+        string $heureFin,
+        ?string $pauseDebut,
+        ?string $pauseFin
+    ): bool {
+        // Vérifier que le service existe, le créer si nécessaire
+        $check = $this->db->query("SELECT id FROM services WHERE id = 1 LIMIT 1");
+        if (!$check->fetch()) {
+            $this->db->exec(
+                "INSERT INTO services (id, nom, adresse, horaires_ouverture, horaires_fermeture, statut)
+                 VALUES (1, 'Hôpital', '', '08:00:00', '18:00:00', 'actif')"
+            );
+        }
+
+        $stmt = $this->db->prepare(
+            "UPDATE services
+             SET horaires_ouverture = :ouv,
+                 horaires_fermeture = :fer,
+                 pause_debut        = :pd,
+                 pause_fin          = :pf
+             WHERE id = 1"
+        );
+        return $stmt->execute([
+            ':ouv' => $heureDebut,
+            ':fer' => $heureFin,
+            ':pd'  => $pauseDebut ?: null,
+            ':pf'  => $pauseFin   ?: null,
+        ]);
     }
 
     /**
