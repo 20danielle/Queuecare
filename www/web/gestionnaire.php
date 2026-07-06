@@ -11,6 +11,11 @@ error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
+// La session doit être démarrée AVANT LangHelper::init(), sinon $_SESSION['lang']
+// n'est pas encore disponible et la langue retombe systématiquement sur 'fr'
+// (c'est ce qui empêchait la traduction de fonctionner côté gestionnaire).
+if (session_status() === PHP_SESSION_NONE) session_start();
+
 require_once __DIR__ . '/helpers/AuthHelper.php';
 require_once __DIR__ . '/helpers/LangHelper.php';
 LangHelper::init();

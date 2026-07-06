@@ -113,11 +113,11 @@ $pauseDebut = $serviceHoraires['pause_debut'] ? substr($serviceHoraires['pause_d
 $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin'], 0, 5) : null;
 ?>
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="<?= \LangHelper::getLang() ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Dashboard Médecin — QueueCare</title>
+    <title><?= __('page_title_doctor') ?></title>
     <link rel="icon" type="image/png" href="public/img/favicon-32.png">
     <link rel="icon" type="image/png" sizes="64x64" href="public/img/favicon-64.png">
     <link href="https://fonts.bunny.net/css?family=playfair-display:400,500,700|outfit:300,400,500,600,700&display=swap" rel="stylesheet">
@@ -380,7 +380,7 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
 
     <div id="refreshIndicator" class="refresh-indicator">
         <i class="fa-solid fa-spinner fa-spin"></i>
-        <span>Mise à jour...</span>
+        <span><?= __('refreshing') ?></span>
     </div>
     
     <!-- Sidebar -->
@@ -407,19 +407,19 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
         
         <nav class="sidebar-nav">
             <div class="nav-item active" data-section="consultations" onclick="showSection('consultations')">
-                <i class="fa-solid fa-calendar-day"></i><span>Consultations du jour</span>
+                <i class="fa-solid fa-calendar-day"></i><span><?= __('today_consultations') ?></span>
             </div>
             <div class="nav-item" data-section="planning" onclick="showSection('planning')">
-                <i class="fa-solid fa-calendar-week"></i><span>Mon planning</span>
+                <i class="fa-solid fa-calendar-week"></i><span><?= __('my_schedule') ?></span>
             </div>
             <div class="nav-item" data-section="stats" onclick="showSection('stats')">
-                <i class="fa-solid fa-chart-line"></i><span>Mes statistiques</span>
+                <i class="fa-solid fa-chart-line"></i><span><?= __('my_stats') ?></span>
             </div>
             <div class="nav-item" data-section="historique" onclick="showSection('historique')">
-                <i class="fa-solid fa-clock-rotate-left"></i><span>Historique</span>
+                <i class="fa-solid fa-clock-rotate-left"></i><span><?= __('history') ?></span>
             </div>
             <div class="nav-item" data-section="profil" onclick="showSection('profil')">
-                <i class="fa-solid fa-user"></i><span>Mon profil</span>
+                <i class="fa-solid fa-user"></i><span><?= __('my_profile') ?></span>
             </div>
         </nav>
         
@@ -430,15 +430,15 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
                 <span class="lang-label"><i class="fa-solid fa-language"></i></span>
                 <button type="button" class="lang-toggle-btn <?= $currentLang==='fr'?'active':'' ?>"
                         onclick="dashChangerLangue('fr','medecin')">
-                    🇫🇷 Français
+                    🇫🇷 <?= __('lang_fr_full') ?>
                 </button>
                 <button type="button" class="lang-toggle-btn <?= $currentLang==='en'?'active':'' ?>"
                         onclick="dashChangerLangue('en','medecin')">
-                    🇬🇧 English
+                    🇬🇧 <?= __('lang_en_full') ?>
                 </button>
             </div>
-            <a href="accueil.php" class="logout-btn" style="margin-bottom: 6px;"><i class="fa-solid fa-house"></i><span>Accueil</span></a>
-            <a href="medecin.php?action=deconnexion" class="logout-btn"><i class="fa-solid fa-right-from-bracket"></i><span>Déconnexion</span></a>
+            <a href="accueil.php" class="logout-btn" style="margin-bottom: 6px;"><i class="fa-solid fa-house"></i><span><?= __('sidebar_home') ?></span></a>
+            <a href="medecin.php?action=deconnexion" class="logout-btn"><i class="fa-solid fa-right-from-bracket"></i><span><?= __('sidebar_logout') ?></span></a>
         </div>
     </aside>
     
@@ -449,18 +449,18 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
                 <button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Menu">
                     <span></span><span></span><span></span>
                 </button>
-                <h1 class="page-title">Tableau de bord</h1>
+                <h1 class="page-title"><?= __('dashboard') ?></h1>
             </div>
             <div>
-                <button class="btn-icon" onclick="window.location.reload()"><i class="fa-solid fa-rotate-right"></i> Actualiser</button>
+                <button class="btn-icon" onclick="window.location.reload()"><i class="fa-solid fa-rotate-right"></i> <?= __('refresh') ?></button>
             </div>
         </div>
         
         <div class="dashboard-content">
             
             <div id="timeoutBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#c2410c;color:#fff;padding:12px 24px;align-items:center;justify-content:space-between;gap:16px;font-size:.9rem;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.3);">
-                <span><i class="fa-solid fa-triangle-exclamation" style="margin-right:8px;"></i>Votre session expire dans moins d'1 minute.</span>
-                <button onclick="document.getElementById('timeoutBanner').style.display='none';resetIdleTimer();">Rester connecté</button>
+                <span><i class="fa-solid fa-triangle-exclamation" style="margin-right:8px;"></i><?= __('session_expiring') ?></span>
+                <button onclick="document.getElementById('timeoutBanner').style.display='none';resetIdleTimer();"><?= __('stay_connected') ?></button>
             </div>
             
             <div id="messageContainer">
@@ -475,12 +475,12 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
             <!-- Section Consultations du jour -->
             <div id="section-consultations" class="section">
                 <div class="section-header">
-                    <span class="section-title"><i class="fa-solid fa-calendar-day"></i> Consultations du jour</span>
+                    <span class="section-title"><i class="fa-solid fa-calendar-day"></i> <?= __('today_consultations') ?></span>
                     <div>
                         <?php if (!empty($consultations)): ?>
-                        <button type="button" class="btn-sm btn-sm-danger" onclick="annulerToutesConsultations()" title="Reporter toutes les consultations du jour au lendemain en priorité"><i class="fa-solid fa-calendar-plus"></i> Reporter au lendemain</button>
+                        <button type="button" class="btn-sm btn-sm-danger" onclick="annulerToutesConsultations()" title="<?= __('postpone_tomorrow_title') ?>"><i class="fa-solid fa-calendar-plus"></i> <?= __('postpone_tomorrow') ?></button>
                         <?php endif; ?>
-                        <span id="consultationsCount" class="badge badge-info"><?= count($consultations) ?> consultation(s)</span>
+                        <span id="consultationsCount" class="badge badge-info"><?= count($consultations) ?> <?= __('consultation_count') ?></span>
                     </div>
                 </div>
                 <div id="medConsultsPills" class="statut-pills"></div>
@@ -494,12 +494,12 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
                     });
                     ?>
                     <?php if (empty($consultations)): ?>
-                    <div class="empty-state">Aucune consultation programmée pour aujourd'hui.</div>
+                    <div class="empty-state"><?= __('no_consultation_today') ?></div>
                     <?php else: ?>
                     <div style="overflow-x:auto;">
                         <table class="med-table">
                             <thead>
-                                <tr><th>#</th><th>Patient</th><th>Téléphone</th><th>Heure prévue</th><th>Heure début</th><th>Heure fin</th><th>Statut</th><th>Action</th></tr>
+                                <tr><th>#</th><th><?= __('patient') ?></th><th><?= __('phone') ?></th><th><?= __('expected_time') ?></th><th><?= __('start_time') ?></th><th><?= __('end_time') ?></th><th><?= __('status') ?></th><th><?= __('action') ?></th></tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($consultations as $c): ?>
@@ -519,24 +519,24 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
                                             default => 'badge-secondary' 
                                         }; 
                                         $lb = match($c['statut']) { 
-                                            'traite' => 'Traitée', 
-                                            'en_cours' => 'En cours', 
-                                            'annule' => 'Annulée', 
-                                            'absent' => 'Absent', 
-                                            'en_attente' => 'En attente', 
-                                            'confirme' => 'Confirmé', 
+                                            'traite' => __('status_treated'), 
+                                            'en_cours' => __('status_in_progress'), 
+                                            'annule' => __('status_cancelled'), 
+                                            'absent' => __('status_absent'), 
+                                            'en_attente' => __('status_waiting'), 
+                                            'confirme' => __('status_confirmed'), 
                                             default => $c['statut'] 
                                         }; 
                                         ?><span class="badge <?= $bc ?>"><?= $lb ?></span></td>
                                     <td><div style="display:flex; gap:5px;">
                                         <?php if ($c['statut'] === 'en_cours'): ?>
-                                        <button class="btn-sm btn-sm-success" onclick="terminerConsultation(<?= $c['id'] ?>)"><i class="fa-solid fa-check"></i> Terminer</button>
-                                        <button class="btn-sm btn-sm-primary" onclick="ouvrirModalRdv(<?= $c['id'] ?>, '<?= htmlspecialchars($c['patient_nom'] . ' ' . $c['patient_prenom']) ?>')"><i class="fa-solid fa-calendar-plus"></i> Prochain RDV</button>
+                                        <button class="btn-sm btn-sm-success" onclick="terminerConsultation(<?= $c['id'] ?>)"><i class="fa-solid fa-check"></i> <?= __('finish') ?></button>
+                                        <button class="btn-sm btn-sm-primary" onclick="ouvrirModalRdv(<?= $c['id'] ?>, '<?= htmlspecialchars($c['patient_nom'] . ' ' . $c['patient_prenom']) ?>')"><i class="fa-solid fa-calendar-plus"></i> <?= __('next_appointment') ?></button>
                                         <?php elseif (in_array($c['statut'], ['en_attente', 'confirme'])): ?>
-                                        <button class="btn-sm btn-sm-info" onclick="demarrerConsultation(<?= $c['id'] ?>)"><i class="fa-solid fa-play"></i> Démarrer</button>
+                                        <button class="btn-sm btn-sm-info" onclick="demarrerConsultation(<?= $c['id'] ?>)"><i class="fa-solid fa-play"></i> <?= __('start') ?></button>
                                         <?php endif; ?>
                                         <?php if (!in_array($c['statut'], ['traite', 'annule', 'absent'])): ?>
-                                        <button class="btn-sm btn-sm-warning" onclick="marquerAbsent(<?= $c['id'] ?>)"><i class="fa-solid fa-user-slash"></i> Absent</button>
+                                        <button class="btn-sm btn-sm-warning" onclick="marquerAbsent(<?= $c['id'] ?>)"><i class="fa-solid fa-user-slash"></i> <?= __('absent_btn') ?></button>
                                         <?php endif; ?>
                                         </div></td>
                                 </tr>
@@ -551,39 +551,39 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
             <!-- Section Planning -->
             <div id="section-planning" class="section" style="display:none;">
                 <div class="section-header">
-                    <span class="section-title"><i class="fa-solid fa-calendar-week"></i> Mon emploi du temps</span>
-                    <button class="btn-icon" onclick="chargerPlanning()"><i class="fa-solid fa-rotate-right"></i> Rafraîchir</button>
+                    <span class="section-title"><i class="fa-solid fa-calendar-week"></i> <?= __('my_timetable') ?></span>
+                    <button class="btn-icon" onclick="chargerPlanning()"><i class="fa-solid fa-rotate-right"></i> <?= __('refresh') ?></button>
                 </div>
                 
                 <div class="info-banner">
                     <i class="fa-solid fa-clock"></i>
-                    <span>Horaires : <strong><?= $heureOuverture ?> - <?= $heureFermeture ?></strong></span>
+                    <span><?= __('hours_label') ?> : <strong><?= $heureOuverture ?> - <?= $heureFermeture ?></strong></span>
                     <?php if ($pauseDebut && $pauseFin): ?>
-                    <span>• Pause : <strong><?= $pauseDebut ?> - <?= $pauseFin ?></strong></span>
+                    <span>• <?= __('break_label') ?> : <strong><?= $pauseDebut ?> - <?= $pauseFin ?></strong></span>
                     <?php endif; ?>
                 </div>
                 
                 <div class="legend">
-                    <div class="legend-item"><div class="legend-color" style="background:#bfdbfe;border-left:3px solid #3b82f6;border-radius:3px;"></div><span>Programmée</span></div>
-                    <div class="legend-item"><div class="legend-color" style="background:#bbf7d0;border-left:3px solid #10b981;border-radius:3px;"></div><span>En cours</span></div>
-                    <div class="legend-item"><div class="legend-color" style="background:#e2e8f0;border-left:3px solid #94a3b8;border-radius:3px;"></div><span>Traité</span></div>
-                    <div class="legend-item"><div class="legend-color" style="background:#fde68a;border-left:3px solid #f59e0b;border-radius:3px;"></div><span>Pause</span></div>
-                    <div class="legend-item"><div class="legend-color" style="background:repeating-linear-gradient(45deg,#f8fafc,#f8fafc 4px,#f1f5f9 4px,#f1f5f9 9px);border:1px solid #e2e8f0;border-radius:3px;"></div><span>Non disponible</span></div>
+                    <div class="legend-item"><div class="legend-color" style="background:#bfdbfe;border-left:3px solid #3b82f6;border-radius:3px;"></div><span><?= __('legend_scheduled') ?></span></div>
+                    <div class="legend-item"><div class="legend-color" style="background:#bbf7d0;border-left:3px solid #10b981;border-radius:3px;"></div><span><?= __('legend_in_progress') ?></span></div>
+                    <div class="legend-item"><div class="legend-color" style="background:#e2e8f0;border-left:3px solid #94a3b8;border-radius:3px;"></div><span><?= __('legend_treated') ?></span></div>
+                    <div class="legend-item"><div class="legend-color" style="background:#fde68a;border-left:3px solid #f59e0b;border-radius:3px;"></div><span><?= __('legend_paused') ?></span></div>
+                    <div class="legend-item"><div class="legend-color" style="background:repeating-linear-gradient(45deg,#f8fafc,#f8fafc 4px,#f1f5f9 4px,#f1f5f9 9px);border:1px solid #e2e8f0;border-radius:3px;"></div><span><?= __('legend_unavailable') ?></span></div>
                 </div>
                 
                 <div class="semaine-nav">
                     <div style="display:flex;gap:8px;">
-                        <button class="btn-icon" onclick="changerSemaine(-1)"><i class="fa-solid fa-chevron-left"></i> Semaine préc.</button>
-                        <button class="btn-icon" onclick="changerSemaine(0)"><i class="fa-solid fa-calendar-day"></i> Cette semaine</button>
-                        <button class="btn-icon" onclick="changerSemaine(1)">Semaine suiv. <i class="fa-solid fa-chevron-right"></i></button>
+                        <button class="btn-icon" onclick="changerSemaine(-1)"><i class="fa-solid fa-chevron-left"></i> <?= __('prev_week') ?></button>
+                        <button class="btn-icon" onclick="changerSemaine(0)"><i class="fa-solid fa-calendar-day"></i> <?= __('this_week') ?></button>
+                        <button class="btn-icon" onclick="changerSemaine(1)"><?= __('next_week') ?> <i class="fa-solid fa-chevron-right"></i></button>
                     </div>
-                    <div id="semaineLabel" class="semaine-label">Chargement...</div>
+                    <div id="semaineLabel" class="semaine-label"><?= __('loading') ?></div>
                 </div>
                 
                 <div id="planningContainer">
                     <div id="planningLoading" style="text-align:center;padding:40px;">
                         <i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem;color:#0052a0;"></i>
-                        <p style="margin-top:10px;">Chargement...</p>
+                        <p style="margin-top:10px;"><?= __('loading') ?></p>
                     </div>
                     <div id="planningTable" style="display:none;"></div>
                 </div>
@@ -594,42 +594,43 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
                 <!-- Filtres période -->
                 <div class="section" style="margin-bottom:16px;padding:16px 20px;">
                     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-                        <span style="font-weight:600;font-size:.9rem;color:#0052a0;"><i class="fa-solid fa-calendar-range"></i> Période :</span>
+                        <span style="font-weight:600;font-size:.9rem;color:#0052a0;"><i class="fa-solid fa-calendar-range"></i> <?= __('period_label') ?></span>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                            <button class="btn-periode active" data-jours="7" onclick="changerPeriode(this,7)">7 jours</button>
-                            <button class="btn-periode" data-jours="30" onclick="changerPeriode(this,30)">30 jours</button>
-                            <button class="btn-periode" data-jours="90" onclick="changerPeriode(this,90)">3 mois</button>
-                            <button class="btn-periode" data-jours="365" onclick="changerPeriode(this,365)">1 an</button>
+                            <button class="btn-periode" data-jours="0" onclick="changerPeriode(this,0)"><?= __('today_btn') ?></button>
+                            <button class="btn-periode active" data-jours="7" onclick="changerPeriode(this,7)"><?= __('days_7') ?></button>
+                            <button class="btn-periode" data-jours="30" onclick="changerPeriode(this,30)"><?= __('days_30') ?></button>
+                            <button class="btn-periode" data-jours="90" onclick="changerPeriode(this,90)"><?= __('months_3') ?></button>
+                            <button class="btn-periode" data-jours="365" onclick="changerPeriode(this,365)"><?= __('year_1') ?></button>
                         </div>
                     </div>
                 </div>
 
                 <!-- Cards résumé -->
                 <div class="stats-grid" id="statsGridMed">
-                    <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-users"></i></div><div class="stat-value" id="statTotal"><?= (int)($stats['total'] ?? 0) ?></div><div class="stat-label">Total</div></div>
-                    <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-circle-check"></i></div><div class="stat-value" id="statTraitees"><?= (int)($stats['traitees'] ?? 0) ?></div><div class="stat-label">Traitées</div></div>
-                    <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-hourglass-half"></i></div><div class="stat-value" id="statEnAttente"><?= (int)($stats['en_attente'] ?? 0) ?></div><div class="stat-label">En attente</div></div>
-                    <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-user-slash"></i></div><div class="stat-value" id="statAbsentes"><?= (int)($stats['absentes'] ?? 0) ?></div><div class="stat-label">Absents</div></div>
-                    <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-ban"></i></div><div class="stat-value" id="statAnnulees"><?= (int)($stats['annulees'] ?? 0) ?></div><div class="stat-label">Annulées</div></div>
-                    <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-clock"></i></div><div class="stat-value" id="statDureeMoy"><?php $dm = (int)($stats['duree_moy_sec'] ?? 0); echo $dm > 0 ? round($dm / 60) . 'min' : '—'; ?></div><div class="stat-label">Durée moy.</div></div>
+                    <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-users"></i></div><div class="stat-value" id="statTotal"><?= (int)($stats['total'] ?? 0) ?></div><div class="stat-label"><?= __('total') ?></div></div>
+                    <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-circle-check"></i></div><div class="stat-value" id="statTraitees"><?= (int)($stats['traitees'] ?? 0) ?></div><div class="stat-label"><?= __('treated') ?></div></div>
+                    <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-hourglass-half"></i></div><div class="stat-value" id="statEnAttente"><?= (int)($stats['en_attente'] ?? 0) ?></div><div class="stat-label"><?= __('waiting') ?></div></div>
+                    <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-user-slash"></i></div><div class="stat-value" id="statAbsentes"><?= (int)($stats['absentes'] ?? 0) ?></div><div class="stat-label"><?= __('absents') ?></div></div>
+                    <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-ban"></i></div><div class="stat-value" id="statAnnulees"><?= (int)($stats['annulees'] ?? 0) ?></div><div class="stat-label"><?= __('cancelled_pl') ?></div></div>
+                    <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-clock"></i></div><div class="stat-value" id="statDureeMoy"><?php $dm = (int)($stats['duree_moy_sec'] ?? 0); echo $dm > 0 ? round($dm / 60) . 'min' : '—'; ?></div><div class="stat-label"><?= __('avg_duration') ?></div></div>
                 </div>
 
                 <!-- Graphiques -->
                 <div class="section" style="margin-bottom:20px;">
                     <div class="section-header">
-                        <span class="section-title"><i class="fa-solid fa-chart-line"></i> Évolution des consultations</span>
-                        <div id="statsChargement" style="font-size:.8rem;color:#64748b;"><i class="fa-solid fa-spinner fa-spin"></i> Chargement...</div>
+                        <span class="section-title"><i class="fa-solid fa-chart-line"></i> <?= __('consultations_evolution') ?></span>
+                        <div id="statsChargement" style="font-size:.8rem;color:#64748b;"><i class="fa-solid fa-spinner fa-spin"></i> <?= __('loading') ?></div>
                     </div>
                     <canvas id="chartEvolution" style="max-height:300px;"></canvas>
                 </div>
 
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;" class="charts-double-col">
                     <div class="section">
-                        <div class="section-header"><span class="section-title"><i class="fa-solid fa-chart-pie"></i> Répartition par statut</span></div>
+                        <div class="section-header"><span class="section-title"><i class="fa-solid fa-chart-pie"></i> <?= __('status_breakdown') ?></span></div>
                         <canvas id="chartDonut" style="max-height:260px;"></canvas>
                     </div>
                     <div class="section">
-                        <div class="section-header"><span class="section-title"><i class="fa-solid fa-chart-bar"></i> Consultations par jour de semaine</span></div>
+                        <div class="section-header"><span class="section-title"><i class="fa-solid fa-chart-bar"></i> <?= __('consultations_per_weekday') ?></span></div>
                         <canvas id="chartBarJour" style="max-height:260px;"></canvas>
                     </div>
                 </div>
@@ -637,30 +638,30 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
                 <!-- Section Temps d'attente moyen -->
                 <div class="section" style="margin-bottom:20px;">
                     <div class="section-header">
-                        <span class="section-title"><i class="fa-solid fa-hourglass-half" style="color:#f59e0b;"></i> Temps d'attente moyen des patients — Mon sous-service</span>
-                        <div id="attenteChargement" style="font-size:.8rem;color:#64748b;"><i class="fa-solid fa-spinner fa-spin"></i> Chargement...</div>
+                        <span class="section-title"><i class="fa-solid fa-hourglass-half" style="color:#f59e0b;"></i> <?= __('avg_wait_time_title') ?></span>
+                        <div id="attenteChargement" style="font-size:.8rem;color:#64748b;"><i class="fa-solid fa-spinner fa-spin"></i> <?= __('loading') ?></div>
                     </div>
                     <!-- Cards résumé attente -->
                     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px;" id="attenteCardsGrid">
                         <div class="stat-card" style="border-top:3px solid #f59e0b;">
                             <div class="stat-icon" style="color:#f59e0b;"><i class="fa-solid fa-clock"></i></div>
                             <div class="stat-value" id="attenteGlobal">—</div>
-                            <div class="stat-label">Temps moyen global (depuis le début)</div>
+                            <div class="stat-label"><?= __('avg_wait_global') ?></div>
                         </div>
                         <div class="stat-card" style="border-top:3px solid #3b82f6;">
                             <div class="stat-icon" style="color:#3b82f6;"><i class="fa-solid fa-calendar-week"></i></div>
                             <div class="stat-value" id="attente7j">—</div>
-                            <div class="stat-label">Temps moyen (7 derniers jours)</div>
+                            <div class="stat-label"><?= __('avg_wait_7d') ?></div>
                         </div>
                         <div class="stat-card" style="border-top:3px solid #10b981;">
                             <div class="stat-icon" style="color:#10b981;"><i class="fa-solid fa-calendar-days"></i></div>
                             <div class="stat-value" id="attente30j">—</div>
-                            <div class="stat-label">Temps moyen (30 derniers jours)</div>
+                            <div class="stat-label"><?= __('avg_wait_30d') ?></div>
                         </div>
                         <div class="stat-card" style="border-top:3px solid #6366f1;">
                             <div class="stat-icon" style="color:#6366f1;"><i class="fa-solid fa-stethoscope"></i></div>
                             <div class="stat-value" id="attenteNbMesures">—</div>
-                            <div class="stat-label">Consultations mesurées</div>
+                            <div class="stat-label"><?= __('measured_consultations') ?></div>
                         </div>
                     </div>
                     <!-- Tendance (indicateur comparaison) -->
@@ -668,12 +669,12 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
                     </div>
                     <!-- Graphique évolution -->
                     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
-                        <span style="font-size:.82rem;font-weight:600;color:#475569;">Période du graphique :</span>
-                        <button class="btn-periode active" data-att="30" onclick="changerPeriodeAttente(this,30)">30 jours</button>
-                        <button class="btn-periode" data-att="90" onclick="changerPeriodeAttente(this,90)">3 mois</button>
-                        <button class="btn-periode" data-att="180" onclick="changerPeriodeAttente(this,180)">6 mois</button>
-                        <button class="btn-periode" data-att="365" onclick="changerPeriodeAttente(this,365)">1 an</button>
-                        <button class="btn-periode" data-att="9999" onclick="changerPeriodeAttente(this,9999)">Depuis le début</button>
+                        <span style="font-size:.82rem;font-weight:600;color:#475569;"><?= __('chart_period') ?></span>
+                        <button class="btn-periode active" data-att="30" onclick="changerPeriodeAttente(this,30)"><?= __('days_30') ?></button>
+                        <button class="btn-periode" data-att="90" onclick="changerPeriodeAttente(this,90)"><?= __('months_3') ?></button>
+                        <button class="btn-periode" data-att="180" onclick="changerPeriodeAttente(this,180)"><?= __('months_6') ?></button>
+                        <button class="btn-periode" data-att="365" onclick="changerPeriodeAttente(this,365)"><?= __('year_1') ?></button>
+                        <button class="btn-periode" data-att="9999" onclick="changerPeriodeAttente(this,9999)"><?= __('since_beginning') ?></button>
                     </div>
                     <canvas id="chartTempsAttente" style="max-height:280px;"></canvas>
                 </div>
@@ -682,50 +683,55 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
             <!-- Section Profil -->
             <div id="section-historique" class="section" style="display:none;">
                 <div class="section-header">
-                    <span class="section-title"><i class="fa-solid fa-clock-rotate-left"></i> Historique des consultations</span>
+                    <span class="section-title"><i class="fa-solid fa-clock-rotate-left"></i> <?= __('consultation_history') ?></span>
                     <span id="historiqueTotal" class="badge badge-secondary" style="background:#f1f5f9;color:#475569;">—</span>
                 </div>
                 <!-- Filtres -->
                 <div id="histPillsMed" class="statut-pills"></div>
                 <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;padding:14px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;">
                     <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:140px;">
-                        <label style="font-size:.72rem;font-weight:600;color:#475569;">Du</label>
+                        <label style="font-size:.72rem;font-weight:600;color:#475569;"><?= __('from') ?></label>
                         <input type="date" id="histDateDebut" onchange="chargerHistorique(1)" style="padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.82rem;font-family:inherit;">
                     </div>
                     <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:140px;">
-                        <label style="font-size:.72rem;font-weight:600;color:#475569;">Au</label>
+                        <label style="font-size:.72rem;font-weight:600;color:#475569;"><?= __('to') ?></label>
                         <input type="date" id="histDateFin" onchange="chargerHistorique(1)" style="padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.82rem;font-family:inherit;">
                     </div>
                     <div style="display:flex;align-items:flex-end;">
                         <button onclick="reinitFiltresHist()" style="padding:8px 14px;background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:.82rem;color:#64748b;">
-                            <i class="fa-solid fa-rotate-left"></i> Réinitialiser
+                            <i class="fa-solid fa-rotate-left"></i> <?= __('reset_filters') ?>
                         </button>
                     </div>
                 </div>
                 <div id="historiqueContent">
-                    <div class="empty-state"><i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem;color:#0052a0;"></i><p>Chargement...</p></div>
+                    <div class="empty-state"><i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem;color:#0052a0;"></i><p><?= __('loading') ?></p></div>
                 </div>
                 <div id="historiquePagination" style="display:flex;justify-content:center;align-items:center;gap:6px;margin-top:20px;flex-wrap:wrap;"></div>
             </div>
 
             <div id="section-profil" class="section" style="display:none;">
-                <div class="section-header"><span class="section-title"><i class="fa-solid fa-user"></i> Mon profil</span></div>
+                <div class="section-header"><span class="section-title"><i class="fa-solid fa-user"></i> <?= __('my_profile') ?></span></div>
                 <!-- Lock screen profil -->
                 <div id="profilLockScreen" class="profil-lock">
                     <div class="profil-lock-icon"><i class="fa-solid fa-lock"></i></div>
-                    <div class="profil-lock-title">Vérification requise</div>
-                    <div class="profil-lock-sub">Entrez votre mot de passe pour accéder à votre profil.</div>
-                    <div class="profil-lock-error" id="profilLockError" style="display:none;">Mot de passe incorrect.</div>
-                    <input type="password" class="profil-lock-input" id="profilLockPassword" placeholder="Votre mot de passe" autocomplete="current-password">
-                    <button class="profil-lock-btn" onclick="verifierMdpProfil()"><i class="fa-solid fa-unlock"></i> Accéder au profil</button>
+                    <div class="profil-lock-title"><?= __('profile_locked') ?></div>
+                    <div class="profil-lock-sub"><?= __('profile_locked_sub') ?></div>
+                    <div class="profil-lock-error" id="profilLockError" style="display:none;"><?= __('wrong_password') ?></div>
+                    <input type="password" class="profil-lock-input" id="profilLockPassword" placeholder="<?= __('profile_lock_pw_input') ?>" autocomplete="current-password">
+                    <button class="profil-lock-btn" onclick="verifierMdpProfil()"><i class="fa-solid fa-unlock"></i> <?= __('access_profile') ?></button>
                 </div>
-                <div id="profilContent" style="display:none;"><div class="empty-state">Chargement...</div></div>
+                <div id="profilContent" style="display:none;"><div class="empty-state"><?= __('loading') ?></div></div>
             </div>
         </div>
     </main>
 </div>
 
 <script>
+    // ── Internationalisation : dictionnaire de la langue courante + helper t() ──
+    const I18N = <?= \LangHelper::toJson() ?>;
+    function t(key) { return I18N[key] || key; }
+    const LOCALE = '<?= \LangHelper::getLang() === "en" ? "en-US" : "fr-FR" ?>';
+
     let currentSection = 'consultations', isRefreshing = false, isRefreshingStats = false, planningOffset = 0;
     let _medConsultStatutFilter = null; // null = tous
     let _histStatutFilterMed = ''; // '' = tous
@@ -803,12 +809,12 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
 
     function renderMedConsultsPills() {
         const bar = document.getElementById('medConsultsPills'); if(!bar) return;
-        const labels = {en_cours:'En cours',en_pause:'En pause',confirme:'Confirmé',en_attente:'En attente',traite:'Traitée',absent:'Absent',annule:'Annulée'};
+        const labels = {en_cours:t('status_in_progress'),en_pause:t('status_paused'),confirme:t('status_confirmed'),en_attente:t('status_waiting'),traite:t('status_treated'),absent:t('status_absent'),annule:t('status_cancelled')};
         const colors = {en_cours:'#3b82f6',en_pause:'#f59e0b',confirme:'#6d5ce7',en_attente:'#94a3b8',traite:'#22c55e',absent:'#f97316',annule:'#ef4444'};
         const counts = {};
         for(const c of _consultationsDataMed) counts[c.statut] = (counts[c.statut]||0)+1;
         const total = _consultationsDataMed.length;
-        let h = `<button class="statut-pill${_medConsultStatutFilter===null?' active':''}" onclick="setMedConsultStatutFilter(null)">Tous <span class="pill-count">${total}</span></button>`;
+        let h = `<button class="statut-pill${_medConsultStatutFilter===null?' active':''}" onclick="setMedConsultStatutFilter(null)">${t('all')} <span class="pill-count">${total}</span></button>`;
         for(const [st, label] of Object.entries(labels)) {
             if(!counts[st]) continue;
             const isActive = _medConsultStatutFilter === st;
@@ -836,7 +842,7 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
     function afficherConsultationsMed(cons, filtered) {
         const c = document.getElementById('consultationsContent');
         if (!c) return;
-        if (!cons || cons.length === 0) { c.innerHTML = `<div class="search-no-result"><i class="fa-solid fa-search"></i><br>${filtered?'Aucun résultat pour cette recherche.':'Aucune consultation programmée.'}</div>`; return; }
+        if (!cons || cons.length === 0) { c.innerHTML = `<div class="search-no-result"><i class="fa-solid fa-search"></i><br>${filtered?t('no_result_search'):t('no_consultation_scheduled')}</div>`; return; }
         const totalPages = Math.max(1, Math.ceil(cons.length / _PER_PAGE_MED));
         if(_consultPageMed > totalPages) _consultPageMed = totalPages;
         const debut = (_consultPageMed - 1) * _PER_PAGE_MED;
@@ -849,11 +855,11 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
             const noms = patientsPrioritaires.map(v => `${escapeHtml(v.patient_prenom)} ${escapeHtml(v.patient_nom)}`).join(', ');
             bandeauPrioritaire = `<div style="background:#fef3c7;border:1.5px solid #f59e0b;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;">
                 <i class="fa-solid fa-triangle-exclamation" style="color:#d97706;font-size:1.1rem;"></i>
-                <span style="font-size:.85rem;font-weight:600;color:#92400e;">Patient(s) revenu(s) d'examen — priorité absolue : <em>${noms}</em> — À appeler dès que possible</span>
+                <span style="font-size:.85rem;font-weight:600;color:#92400e;">${t('priority_patients_banner')} <em>${noms}</em> — ${t('call_asap')}</span>
             </div>`;
         }
 
-        let h = bandeauPrioritaire + '<div style="overflow-x:auto;"><table class="med-table"><thead><tr><th>#</th><th>Patient</th><th>Téléphone</th><th>Heure prévue</th><th>Heure début</th><th>Heure fin</th><th>Statut</th><th>Action</th></tr></thead><tbody>';
+        let h = bandeauPrioritaire + `<div style="overflow-x:auto;"><table class="med-table"><thead><tr><th>#</th><th>${t('patient')}</th><th>${t('phone')}</th><th>${t('expected_time')}</th><th>${t('start_time')}</th><th>${t('end_time')}</th><th>${t('status')}</th><th>${t('action')}</th></tr></thead><tbody>`;
         for(const v of page) {
             const isPauseRetour = v.statut === 'en_pause' && v.priorite_retour;
             const bc = v.statut === 'traite' ? 'badge-success' : (v.statut === 'en_cours' ? 'badge-info' : (v.statut === 'annule' ? 'badge-secondary' : (v.statut === 'absent' ? 'badge-danger' : (v.statut === 'en_pause' ? 'badge-pause' : 'badge-secondary'))));
@@ -863,10 +869,10 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
             if(v.statut === 'en_pause' && v.secondes_en_pause > 0) {
                 const mins = Math.floor(v.secondes_en_pause/60);
                 const secs = v.secondes_en_pause % 60;
-                pauseDetail = `<br><small style="color:#b45309;font-size:.7rem;"><i class="fa-solid fa-clock"></i> Parti depuis ${mins}min ${secs}s${v.motif_pause?' — '+escapeHtml(v.motif_pause):''}</small>`;
+                pauseDetail = `<br><small style="color:#b45309;font-size:.7rem;"><i class="fa-solid fa-clock"></i> ${t('left_since')} ${mins}min ${secs}s${v.motif_pause?' — '+escapeHtml(v.motif_pause):''}</small>`;
             }
             if(isPauseRetour) {
-                pauseDetail += `<br><span style="display:inline-flex;align-items:center;gap:4px;background:#0052a0;color:white;font-size:.68rem;font-weight:700;border-radius:20px;padding:2px 8px;margin-top:3px;"><i class="fa-solid fa-star"></i> Priorité retour examen</span>`;
+                pauseDetail += `<br><span style="display:inline-flex;align-items:center;gap:4px;background:#0052a0;color:white;font-size:.68rem;font-weight:700;border-radius:20px;padding:2px 8px;margin-top:3px;"><i class="fa-solid fa-star"></i> ${t('return_priority_badge')}</span>`;
             }
             const rowStyle = isPauseRetour ? 'style="background:#eff6ff;border-left:3px solid #0052a0;"' : (v.statut==='en_pause'?'style="background:#fffbeb;"':'');
             h += `<tr ${rowStyle}>
@@ -879,16 +885,16 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
                 <td><span class="badge ${bc}">${lb}</span>${pauseDetail}</td>
                 <td><div style="display:flex; gap:5px; flex-wrap:wrap;">`;
             if(v.statut === 'en_cours') {
-                h += `<button class="btn-sm btn-sm-success" onclick="terminerConsultation(${v.id})"><i class="fa-solid fa-check"></i> Terminer</button>`;
-                h += `<button class="btn-sm btn-sm-primary" onclick="ouvrirModalRdv(${v.id}, '${(v.patient_nom||'')} ${(v.patient_prenom||'')}')"><i class="fa-solid fa-calendar-plus"></i> Prochain RDV</button>`;
-                h += `<button class="btn-sm btn-sm-pause" onclick="ouvrirModalPause(${v.id})"><i class="fa-solid fa-pause"></i> Pause examen</button>`;
+                h += `<button class="btn-sm btn-sm-success" onclick="terminerConsultation(${v.id})"><i class="fa-solid fa-check"></i> ${t('finish')}</button>`;
+                h += `<button class="btn-sm btn-sm-primary" onclick="ouvrirModalRdv(${v.id}, '${(v.patient_nom||'')} ${(v.patient_prenom||'')}')"><i class="fa-solid fa-calendar-plus"></i> ${t('next_appointment')}</button>`;
+                h += `<button class="btn-sm btn-sm-pause" onclick="ouvrirModalPause(${v.id})"><i class="fa-solid fa-pause"></i> ${t('pause_exam')}</button>`;
             }
             else if(v.statut === 'en_pause') {
-                h += `<button class="btn-sm btn-sm-resume" style="${isPauseRetour?'font-weight:700;border:2px solid #0052a0;':''}" onclick="reprendreConsultation(${v.id})"><i class="fa-solid fa-play"></i> ${isPauseRetour?'⭐ Reprendre (priorité)':'Reprendre'}</button>`;
-                h += `<button class="btn-sm btn-sm-success" onclick="terminerConsultation(${v.id})"><i class="fa-solid fa-check"></i> Terminer</button>`;
+                h += `<button class="btn-sm btn-sm-resume" style="${isPauseRetour?'font-weight:700;border:2px solid #0052a0;':''}" onclick="reprendreConsultation(${v.id})"><i class="fa-solid fa-play"></i> ${isPauseRetour?t('resume_priority'):t('resume')}</button>`;
+                h += `<button class="btn-sm btn-sm-success" onclick="terminerConsultation(${v.id})"><i class="fa-solid fa-check"></i> ${t('finish')}</button>`;
             }
-            else if(v.statut === 'en_attente' || v.statut === 'confirme') h += `<button class="btn-sm btn-sm-info" onclick="demarrerConsultation(${v.id})"><i class="fa-solid fa-play"></i> Démarrer</button>`;
-            if(!['traite','annule','absent','en_pause'].includes(v.statut)) h += `<button class="btn-sm btn-sm-warning" onclick="marquerAbsent(${v.id})"><i class="fa-solid fa-user-slash"></i> Absent</button>`;
+            else if(v.statut === 'en_attente' || v.statut === 'confirme') h += `<button class="btn-sm btn-sm-info" onclick="demarrerConsultation(${v.id})"><i class="fa-solid fa-play"></i> ${t('start')}</button>`;
+            if(!['traite','annule','absent','en_pause'].includes(v.statut)) h += `<button class="btn-sm btn-sm-warning" onclick="marquerAbsent(${v.id})"><i class="fa-solid fa-user-slash"></i> ${t('absent_btn')}</button>`;
             h += `</div></td></tr>`;
         }
         h += '</tbody></table></div>';
@@ -930,7 +936,7 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
     function _handleAjaxResponse(d, successMsg) {
         if (d.redirect) { window.location.href = d.redirect; return; }
         if (d.success) { afficherMessage(successMsg, 'success'); rafraichirConsultations(); }
-        else afficherMessage(d.message || 'Erreur', 'error');
+        else afficherMessage(d.message || t('generic_error'), 'error');
     }
 
     function demarrerConsultation(id) {
@@ -942,13 +948,13 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
         .then(r => r.json()).then(d => {
             if (d.redirect) { window.location.href = d.redirect; return; }
             if (d.success) {
-                afficherMessage('Consultation démarrée', 'success');
+                afficherMessage(t('consultation_started'), 'success');
                 rafraichirConsultations();
             } else {
-                afficherMessage(d.message || 'Impossible de démarrer', 'error');
+                afficherMessage(d.message || t('cant_start'), 'error');
             }
         })
-        .catch(e => { afficherMessage('Erreur réseau', 'error'); console.error(e); });
+        .catch(e => { afficherMessage(t('network_error_short'), 'error'); console.error(e); });
     }
 
     function terminerConsultation(id) {
@@ -960,14 +966,14 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
         .then(r => r.json()).then(d => {
             if (d.redirect) { window.location.href = d.redirect; return; }
             if (d.success) {
-                afficherMessage('Consultation terminée', 'success');
+                afficherMessage(t('consultation_finished'), 'success');
                 rafraichirConsultations();
             } else {
-                afficherMessage(d.message || 'Impossible de terminer', 'error');
+                afficherMessage(d.message || t('cant_finish'), 'error');
                 console.error('Debug:', d.debug || d);
             }
         })
-        .catch(e => { afficherMessage('Erreur réseau', 'error'); console.error(e); });
+        .catch(e => { afficherMessage(t('network_error_short'), 'error'); console.error(e); });
     }
 
     function marquerAbsent(id) {
@@ -979,14 +985,14 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
         .then(r => r.json()).then(d => {
             if (d.redirect) { window.location.href = d.redirect; return; }
             if (d.success) {
-                afficherMessage('Patient marqué absent', 'success');
+                afficherMessage(t('patient_marked_absent'), 'success');
                 rafraichirConsultations();
             } else {
-                afficherMessage(d.message || 'Erreur', 'error');
+                afficherMessage(d.message || t('generic_error'), 'error');
                 console.error('Debug:', d.debug || d);
             }
         })
-        .catch(e => { afficherMessage('Erreur réseau', 'error'); console.error(e); });
+        .catch(e => { afficherMessage(t('network_error_short'), 'error'); console.error(e); });
     }
 
     // ── Pause examen ──
@@ -1011,7 +1017,7 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
 
     function confirmerPause() {
         const id    = _pauseConsultationId;
-        const motif = document.getElementById('pauseMotif')?.value.trim() || 'Examen externe';
+        const motif = document.getElementById('pauseMotif')?.value.trim() || t('default_exam_reason');
         if(!id) return;
         fermerModalPause();
         fetch('medecin.php?action=mettre_en_pause_ajax', {
@@ -1021,17 +1027,17 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
         })
         .then(r => r.json()).then(d => {
             if(d.success) {
-                afficherMessage('Consultation mise en pause — ' + motif, 'success');
+                afficherMessage(t('consultation_paused_with') + ' ' + motif, 'success');
                 setTimeout(rafraichirConsultations, 600);
             } else {
-                afficherMessage(d.message || 'Erreur', 'error');
+                afficherMessage(d.message || t('generic_error'), 'error');
             }
         })
-        .catch(() => afficherMessage('Erreur réseau', 'error'));
+        .catch(() => afficherMessage(t('network_error_short'), 'error'));
     }
 
     function reprendreConsultation(id) {
-        if(!confirm('Le patient est revenu ? La consultation va reprendre.')) return;
+        if(!confirm(t('patient_returned_confirm'))) return;
         fetch('medecin.php?action=reprendre_consultation_ajax', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1039,13 +1045,13 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
         })
         .then(r => r.json()).then(d => {
             if(d.success) {
-                afficherMessage('Consultation reprise !', 'success');
+                afficherMessage(t('consultation_resumed_ex'), 'success');
                 setTimeout(rafraichirConsultations, 600);
             } else {
-                afficherMessage(d.message || 'Erreur', 'error');
+                afficherMessage(d.message || t('generic_error'), 'error');
             }
         })
-        .catch(() => afficherMessage('Erreur réseau', 'error'));
+        .catch(() => afficherMessage(t('network_error_short'), 'error'));
     }
 
     // Fermer le modal pause avec Escape
@@ -1054,10 +1060,10 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
     });
     
     function annulerToutesConsultations() {
-        if(confirm('⚠️ Reporter toutes vos consultations du jour au lendemain ?\n\nElles seront programmées demain en priorité, dans le même ordre.')) {
+        if(confirm(t('postpone_all_confirm'))) {
             fetch('medecin.php?action=annuler_toutes_ajax', { method: 'POST' })
-                .then(r => r.json()).then(d => _handleAjaxResponse(d, 'Consultations reportées à demain avec priorité'))
-                .catch(() => afficherMessage('Erreur réseau, veuillez réessayer.', 'error'));
+                .then(r => r.json()).then(d => _handleAjaxResponse(d, t('postponed_with_priority')))
+                .catch(() => afficherMessage(t('retry_please'), 'error'));
         }
     }
     
@@ -1086,6 +1092,9 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
 
     function showSection(section) {
         currentSection = section;
+        // Sauvegarder dans localStorage pour restaurer l'onglet après un rechargement
+        // (ex: changement de langue), afin que l'interface ne "saute" pas ailleurs.
+        localStorage.setItem('medecin_active_section', section);
         document.getElementById('section-consultations').style.display = 'none';
         document.getElementById('section-planning').style.display = 'none';
         document.getElementById('section-stats').style.display = 'none';
@@ -1135,14 +1144,14 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
                 afficherTableauHistorique(d.data);
                 afficherPaginationHist(d.page, d.last_page);
             })
-            .catch(() => { if(content && !silent) content.innerHTML = '<div class="empty-state">Erreur réseau</div>'; });
+            .catch(() => { if(content && !silent) content.innerHTML = `<div class="empty-state">${t('network_error_short')}</div>`; });
     }
 
     function renderHistPillsMed(counts, total) {
         const bar = document.getElementById('histPillsMed'); if(!bar) return;
-        const labels = {en_attente:'En attente',confirme:'Confirmé',en_cours:'En cours',en_pause:'En pause',traite:'Traitée',absent:'Absent',annule:'Annulée'};
+        const labels = {en_attente:t('status_waiting'),confirme:t('status_confirmed'),en_cours:t('status_in_progress'),en_pause:t('status_paused'),traite:t('status_treated'),absent:t('status_absent'),annule:t('status_cancelled')};
         const colors = {en_attente:'#94a3b8',confirme:'#6d5ce7',en_cours:'#3b82f6',en_pause:'#f59e0b',traite:'#22c55e',absent:'#f97316',annule:'#ef4444'};
-        let h = `<button class="statut-pill${_histStatutFilterMed===''?' active':''}" onclick="setHistStatutFilterMed('')">Tous <span class="pill-count">${total}</span></button>`;
+        let h = `<button class="statut-pill${_histStatutFilterMed===''?' active':''}" onclick="setHistStatutFilterMed('')">${t('all')} <span class="pill-count">${total}</span></button>`;
         for(const [st, label] of Object.entries(labels)) {
             const cnt = counts[st] || 0;
             if(!cnt) continue;
@@ -1162,14 +1171,14 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
         const c = document.getElementById('historiqueContent');
         if(!c) return;
         if(!rows || rows.length === 0) {
-            c.innerHTML = '<div class="empty-state"><i class="fa-solid fa-inbox" style="font-size:2rem;margin-bottom:10px;"></i><br>Aucune consultation trouvée.</div>';
+            c.innerHTML = `<div class="empty-state"><i class="fa-solid fa-inbox" style="font-size:2rem;margin-bottom:10px;"></i><br>${t('no_consultation_found')}</div>`;
             return;
         }
-        let h = '<div style="overflow-x:auto;"><table class="med-table"><thead><tr><th>Date</th><th>Patient</th><th>Téléphone</th><th>Heure prévue</th><th>Début</th><th>Fin</th><th>Durée</th><th>Statut</th><th>Mode</th></tr></thead><tbody>';
+        let h = `<div style="overflow-x:auto;"><table class="med-table"><thead><tr><th>${t('date_label')}</th><th>${t('patient')}</th><th>${t('phone')}</th><th>${t('expected_time')}</th><th>${t('start_short')}</th><th>${t('end_time')}</th><th>${t('duration_label')}</th><th>${t('status')}</th><th>${t('mode_label')}</th></tr></thead><tbody>`;
         for(const v of rows) {
             const bcMap = { traite:'badge-success', absent:'badge-warning', annule:'badge-danger', en_cours:'badge-info', en_pause:'badge-secondary', en_attente:'badge-secondary', confirme:'badge-secondary' };
-            const lbMap = { traite:'Traité', absent:'Absent', annule:'Annulé', en_cours:'En cours', en_pause:'En pause', en_attente:'En attente', confirme:'Confirmé' };
-            const modeMap = { LIGNE:'<span class="badge badge-info" style="font-size:.65rem;">En ligne</span>', PLACE:'<span class="badge badge-secondary" style="font-size:.65rem;">Sur place</span>', MANUEL:'<span class="badge badge-secondary" style="font-size:.65rem;">Manuel</span>', QR_CODE:'<span class="badge badge-secondary" style="font-size:.65rem;">QR Code</span>' };
+            const lbMap = { traite:t('status_treated'), absent:t('status_absent'), annule:t('status_cancelled'), en_cours:t('status_in_progress'), en_pause:t('status_paused'), en_attente:t('status_waiting'), confirme:t('status_confirmed') };
+            const modeMap = { LIGNE:`<span class="badge badge-info" style="font-size:.65rem;">${t('online_mode')}</span>`, PLACE:`<span class="badge badge-secondary" style="font-size:.65rem;">${t('onsite_mode')}</span>`, MANUEL:`<span class="badge badge-secondary" style="font-size:.65rem;">${t('manual_mode')}</span>`, QR_CODE:'<span class="badge badge-secondary" style="font-size:.65rem;">QR Code</span>' };
             h += `<tr>
                 <td style="white-space:nowrap;">${escapeHtml(v.date_consultation)}</td>
                 <td><strong>${escapeHtml(v.patient_nom)} ${escapeHtml(v.patient_prenom)}</strong></td>
@@ -1212,8 +1221,8 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
     
     function getLundiSemaine(offset) { offset = offset || 0; const t = new Date(), dow = t.getDay(), diff = dow === 0 ? -6 : -(dow - 1), l = new Date(t); l.setDate(t.getDate() + diff + (offset * 7)); return l; }
     function formatDateISO(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
-    function formatDateFr(d) { return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}); }
-    function getNomJour(d) { return d.toLocaleDateString('fr-FR',{weekday:'long'}); }
+    function formatDateFr(d) { return d.toLocaleDateString(LOCALE,{day:'2-digit',month:'2-digit',year:'numeric'}); }
+    function getNomJour(d) { return d.toLocaleDateString(LOCALE,{weekday:'long'}); }
     function getNumJourSemaine(d) { let jour = d.getDay(); return jour === 0 ? 7 : jour; }
     function changerSemaine(delta) { if(delta===0) planningOffset=0; else planningOffset+=delta; chargerPlanning(); }
     
@@ -1231,7 +1240,7 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
                 document.getElementById('planningLoading').style.display = 'none';
                 if(d.error) { if(!silent){ document.getElementById('planningTable').innerHTML = `<div class="empty-state">${d.error}</div>`; document.getElementById('planningTable').style.display = 'block'; } return; }
                 afficherPlanning(d);
-            }).catch(() => { document.getElementById('planningLoading').style.display = 'none'; if(!silent){ document.getElementById('planningTable').innerHTML = '<div class="empty-state">Erreur de chargement</div>'; document.getElementById('planningTable').style.display = 'block'; } });
+            }).catch(() => { document.getElementById('planningLoading').style.display = 'none'; if(!silent){ document.getElementById('planningTable').innerHTML = `<div class="empty-state">${t('loading_error')}</div>`; document.getElementById('planningTable').style.display = 'block'; } });
     }
     
     function afficherPlanning(data) {
@@ -1363,15 +1372,15 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
     });
     function chargerProfilData() {
         const c = document.getElementById('profilContent');
-        c.innerHTML = '<div class="empty-state">Chargement...</div>';
+        c.innerHTML = `<div class="empty-state">${t('loading')}</div>`;
         fetch('medecin.php?action=get_profil_data')
-            .then(r=>r.json()).then(d=>{if(d.success)afficherFormulaireProfil(d.profil);else c.innerHTML=`<div class="profil-error">${d.message||'Erreur'}</div>`;})
-            .catch(()=>c.innerHTML='<div class="profil-error">Erreur</div>');
+            .then(r=>r.json()).then(d=>{if(d.success)afficherFormulaireProfil(d.profil);else c.innerHTML=`<div class="profil-error">${d.message||t('generic_error')}</div>`;})
+            .catch(()=>c.innerHTML=`<div class="profil-error">${t('generic_error')}</div>`);
     }
     
     function afficherFormulaireProfil(profil) {
         const pp = profil.photo && profil.photo !== 'null' && profil.photo !== '' ? profil.photo : 'public/images/default-avatar.png';
-        const html = `<div class="profil-form"><form id="profilForm" enctype="multipart/form-data"><div class="photo-upload-area"><img id="photoPreview" class="photo-preview" src="${pp}"><div><label class="photo-upload-label"><i class="fa-solid fa-camera"></i> Changer la photo<input type="file" name="photo" id="photoInput" accept="image/jpeg,image/png,image/jpg" style="display:none;"></label></div><small>Formats: JPG, PNG (max 2MB)</small></div><div class="form-group"><label><i class="fa-solid fa-user"></i> Nom</label><input type="text" name="nom" id="profil_nom" value="${escapeHtml(profil.nom)}" required></div><div class="form-group"><label><i class="fa-solid fa-user"></i> Prénom</label><input type="text" name="prenom" id="profil_prenom" value="${escapeHtml(profil.prenom)}" required></div><div class="form-group"><label><i class="fa-solid fa-phone"></i> Téléphone</label><input type="tel" name="telephone" id="profil_telephone" value="${escapeHtml(profil.telephone)}" required></div><div class="form-group"><label><i class="fa-solid fa-envelope"></i> Email</label><input type="email" name="email" id="profil_email" value="${escapeHtml(profil.email)}" required></div><div class="profil-separator"></div><div class="profil-title">Changer le mot de passe</div><div class="form-group"><label><i class="fa-solid fa-lock"></i> Mot de passe actuel</label><input type="password" name="password_actuel" id="profil_password_actuel" placeholder="Mot de passe actuel"></div><div class="form-group"><label><i class="fa-solid fa-key"></i> Nouveau mot de passe</label><input type="password" name="nouveau_password" id="profil_nouveau_password" placeholder="Min 8 car., 1 maj., 1 chiffre"></div><div class="form-group"><label><i class="fa-solid fa-check"></i> Confirmer</label><input type="password" name="confirmer_password" id="profil_confirmer_password" placeholder="Répéter"></div><button type="submit" class="btn-save"><i class="fa-solid fa-floppy-disk"></i> Enregistrer</button></form><div id="profilMessage"></div></div>`;
+        const html = `<div class="profil-form"><form id="profilForm" enctype="multipart/form-data"><div class="photo-upload-area"><img id="photoPreview" class="photo-preview" src="${pp}"><div><label class="photo-upload-label"><i class="fa-solid fa-camera"></i> ${t('change_photo')}<input type="file" name="photo" id="photoInput" accept="image/jpeg,image/png,image/jpg" style="display:none;"></label></div><small>${t('formats_accepted_short')}</small></div><div class="form-group"><label><i class="fa-solid fa-user"></i> ${t('last_name')}</label><input type="text" name="nom" id="profil_nom" value="${escapeHtml(profil.nom)}" required></div><div class="form-group"><label><i class="fa-solid fa-user"></i> ${t('first_name')}</label><input type="text" name="prenom" id="profil_prenom" value="${escapeHtml(profil.prenom)}" required></div><div class="form-group"><label><i class="fa-solid fa-phone"></i> ${t('phone')}</label><input type="tel" name="telephone" id="profil_telephone" value="${escapeHtml(profil.telephone)}" required></div><div class="form-group"><label><i class="fa-solid fa-envelope"></i> ${t('email_label')}</label><input type="email" name="email" id="profil_email" value="${escapeHtml(profil.email)}" required></div><div class="profil-separator"></div><div class="profil-title">${t('change_pw_title')}</div><div class="form-group"><label><i class="fa-solid fa-lock"></i> ${t('current_pw')}</label><input type="password" name="password_actuel" id="profil_password_actuel" placeholder="${t('current_pw')}"></div><div class="form-group"><label><i class="fa-solid fa-key"></i> ${t('new_pw')}</label><input type="password" name="nouveau_password" id="profil_nouveau_password" placeholder="${t('password_hint')}"></div><div class="form-group"><label><i class="fa-solid fa-check"></i> ${t('confirm')}</label><input type="password" name="confirmer_password" id="profil_confirmer_password" placeholder="${t('repeat')}"></div><button type="submit" class="btn-save"><i class="fa-solid fa-floppy-disk"></i> ${t('save_btn')}</button></form><div id="profilMessage"></div></div>`;
         document.getElementById('profilContent').innerHTML = html;
         // Pré-remplir le mot de passe actuel avec celui du déverrouillage
         if(_profilPasswordMed) document.getElementById('profil_password_actuel').value = _profilPasswordMed;
@@ -1502,7 +1511,7 @@ function dessinerChartsEvolution(evolution) {
 
 function formatJourCourt(dateStr) {
     const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+    return d.toLocaleDateString(LOCALE, { day: '2-digit', month: '2-digit' });
 }
 
 // ══════════════════════════════════════════════════════
@@ -1546,17 +1555,17 @@ function chargerTempsAttente() {
                 let icon, couleur, msg;
                 if (diff < -2) {
                     icon = '📉'; couleur = '#16a34a';
-                    msg = `Le temps d'attente a <strong>baissé de ${abs} min</strong> en moyenne ces 7 derniers jours par rapport aux 30 derniers jours. Bonne performance !`;
+                    msg = t('wait_time_decreased').replace('%s', abs);
                 } else if (diff > 2) {
                     icon = '📈'; couleur = '#dc2626';
-                    msg = `Le temps d'attente a <strong>augmenté de ${abs} min</strong> ces 7 derniers jours. Vigilance recommandée.`;
+                    msg = t('wait_time_increased').replace('%s', abs);
                 } else {
                     icon = '➡️'; couleur = '#0052a0';
-                    msg = `Le temps d'attente est <strong>stable</strong> (variation < 2 min entre les 7 et 30 derniers jours).`;
+                    msg = t('wait_time_stable');
                 }
                 if (g.premier_jour) {
-                    const premierJour = new Date(g.premier_jour + 'T00:00:00').toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
-                    msg += ` <span style="color:#94a3b8;font-size:.78rem;">Mesures depuis le ${premierJour}.</span>`;
+                    const premierJour = new Date(g.premier_jour + 'T00:00:00').toLocaleDateString(LOCALE, { day:'2-digit', month:'long', year:'numeric' });
+                    msg += ` <span style="color:#94a3b8;font-size:.78rem;">${t('measures_since')} ${premierJour}.</span>`;
                 }
                 tend.innerHTML = `<span style="font-size:1.2rem;">${icon}</span> <span style="color:${couleur};">${msg}</span>`;
                 tend.style.display = 'flex';
@@ -1691,7 +1700,7 @@ function dessinerChartTempsAttente(evolution, ssNom) {
                 const md=document.getElementById('profilMessage');
                 if(d.success){if(md)md.innerHTML=`<div class="profil-success">${d.message}</div>`;setTimeout(()=>window.location.reload(),1500);}
                 else{let err='';if(d.errors)for(const[k,v]of Object.entries(d.errors))err+=`<div class="error-msg">- ${v}</div>`;else err=d.message||'Erreur';if(md)md.innerHTML=`<div class="profil-error">${err}</div>`;}
-            }).catch(()=>{if(btn){btn.innerHTML=ot;btn.disabled=false;}const md=document.getElementById('profilMessage');if(md)md.innerHTML='<div class="profil-error">Erreur</div>';});
+            }).catch(()=>{if(btn){btn.innerHTML=ot;btn.disabled=false;}const md=document.getElementById('profilMessage');if(md)md.innerHTML=`<div class="profil-error">${t('generic_error')}</div>`;});
     }
     
     let idleTimer, warnTimer;
@@ -1741,14 +1750,22 @@ function dessinerChartTempsAttente(evolution, ssNom) {
     // Dès que l'utilisateur revient sur l'onglet, on relance une actualisation immédiate
     document.addEventListener('visibilitychange', () => { if (!document.hidden) actualisationAutomatiqueMed(); });
 
-    window.onload = function() {
-        resetIdleTimer();
-        // Initialiser la pagination sur les données PHP rendues côté serveur
+    // Restaurer l'onglet actif après chargement de la page (ex: après un changement de langue)
+    function restaurerSectionActiveMed() {
+        const savedSection = localStorage.getItem('medecin_active_section');
+        const section = (savedSection && ['consultations', 'planning', 'stats', 'historique', 'profil'].includes(savedSection)) ? savedSection : 'consultations';
+        // Initialiser l'affichage avec les données PHP avant showSection
         if (_consultationsDataMed.length > 0) {
             const cs = document.getElementById('consultationsCount');
             if(cs) cs.innerHTML = _consultationsDataMed.length + ' consultation(s)';
             afficherConsultationsMed(_consultationsDataMed, false);
         }
+        showSection(section);
+    }
+
+    window.onload = function() {
+        resetIdleTimer();
+        restaurerSectionActiveMed();
         demarrerActualisationAutoMed();
     };
     
@@ -1762,27 +1779,27 @@ function dessinerChartTempsAttente(evolution, ssNom) {
     <div style="background:#fff;border-radius:16px;padding:28px 32px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.25);">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
             <span style="width:40px;height:40px;background:#fff3cd;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">⏸</span>
-            <h3 style="margin:0;font-size:1.1rem;color:#1e293b;">Mettre en pause — Examen externe</h3>
+            <h3 style="margin:0;font-size:1.1rem;color:#1e293b;"><?= __('pause_modal_title') ?></h3>
         </div>
         <p style="color:#64748b;font-size:.88rem;margin-bottom:12px;line-height:1.5;">
-            Le patient va passer un examen rapide avant de revenir. Précisez le motif pour garder une trace.
+            <?= __('pause_intro_text') ?>
         </p>
         <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:.82rem;color:#1e40af;display:flex;align-items:center;gap:8px;">
             <i class="fa-solid fa-star"></i>
-            <span><strong>Priorité automatique</strong> — à son retour, ce patient sera remis en tête de file.</span>
+            <span><strong><?= __('auto_priority') ?></strong> <?= __('auto_priority_text') ?></span>
         </div>
-        <label style="font-size:.8rem;font-weight:600;color:#475569;display:block;margin-bottom:6px;">Motif de la pause</label>
-        <input id="pauseMotif" type="text" placeholder="ex: Radio pulmonaire, Analyse sanguine…"
+        <label style="font-size:.8rem;font-weight:600;color:#475569;display:block;margin-bottom:6px;"><?= __('pause_reason') ?></label>
+        <input id="pauseMotif" type="text" placeholder="<?= __('pause_reason_ex') ?>"
                style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.88rem;font-family:inherit;box-sizing:border-box;margin-bottom:20px;"
                onkeydown="if(event.key==='Enter') confirmerPause()">
         <p style="font-size:.78rem;color:#94a3b8;margin-bottom:16px;">
             <i class="fa-solid fa-circle-info" style="color:#3b82f6;"></i>
-            Le patient restera "en pause" jusqu'à ce que vous le repreniez ou le marquiez absent manuellement.
+            <?= __('patient_stays_paused') ?>
         </p>
         <div style="display:flex;gap:10px;justify-content:flex-end;">
-            <button onclick="fermerModalPause()" style="padding:9px 18px;background:#f1f5f9;border:none;border-radius:8px;cursor:pointer;font-size:.85rem;font-family:inherit;color:#475569;">Annuler</button>
+            <button onclick="fermerModalPause()" style="padding:9px 18px;background:#f1f5f9;border:none;border-radius:8px;cursor:pointer;font-size:.85rem;font-family:inherit;color:#475569;"><?= __('cancel') ?></button>
             <button onclick="confirmerPause()" style="padding:9px 18px;background:#f59e0b;border:none;border-radius:8px;cursor:pointer;font-size:.85rem;font-family:inherit;color:#fff;font-weight:600;">
-                <i class="fa-solid fa-pause"></i> Confirmer la pause
+                <i class="fa-solid fa-pause"></i> <?= __('confirm_pause') ?>
             </button>
         </div>
     </div>
@@ -1797,13 +1814,13 @@ function dessinerChartTempsAttente(evolution, ssNom) {
         <!-- En-tête -->
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
             <span style="width:40px;height:40px;background:#dbeafe;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">📅</span>
-            <h3 style="margin:0;font-size:1.1rem;color:#1e293b;">Fixer le prochain rendez-vous</h3>
+            <h3 style="margin:0;font-size:1.1rem;color:#1e293b;"><?= __('next_appt_modal_title') ?></h3>
         </div>
         <p id="rdvPatientLabel" style="color:#64748b;font-size:.85rem;margin:0 0 18px 50px;"></p>
 
         <!-- Date -->
         <label style="font-size:.8rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">
-            <i class="fa-solid fa-calendar-day" style="color:#3b82f6;margin-right:4px;"></i> Date du rendez-vous
+            <i class="fa-solid fa-calendar-day" style="color:#3b82f6;margin-right:4px;"></i> <?= __('rdv_date_label') ?>
         </label>
         <input id="rdvDate" type="date"
                style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.88rem;font-family:inherit;box-sizing:border-box;margin-bottom:14px;"
@@ -1811,17 +1828,17 @@ function dessinerChartTempsAttente(evolution, ssNom) {
 
         <!-- Créneaux -->
         <label style="font-size:.8rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">
-            <i class="fa-solid fa-clock" style="color:#3b82f6;margin-right:4px;"></i> Heure du rendez-vous
+            <i class="fa-solid fa-clock" style="color:#3b82f6;margin-right:4px;"></i> <?= __('rdv_time_label') ?>
         </label>
         <div id="rdvCreneauxWrap" style="margin-bottom:14px;">
-            <p style="color:#94a3b8;font-size:.82rem;font-style:italic;">Sélectionnez d'abord une date.</p>
+            <p style="color:#94a3b8;font-size:.82rem;font-style:italic;"><?= __('rdv_select_date_first') ?></p>
         </div>
 
         <!-- Motif -->
         <label style="font-size:.8rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">
-            <i class="fa-solid fa-pen-line" style="color:#3b82f6;margin-right:4px;"></i> Motif / Notes (optionnel)
+            <i class="fa-solid fa-pen-line" style="color:#3b82f6;margin-right:4px;"></i> <?= __('rdv_reason_label') ?>
         </label>
-        <input id="rdvMotif" type="text" placeholder="ex: Contrôle post-opératoire, Résultats analyses…"
+        <input id="rdvMotif" type="text" placeholder="<?= __('next_appt_reason_ex') ?>"
                style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.88rem;font-family:inherit;box-sizing:border-box;margin-bottom:20px;">
 
         <!-- Confirmation créée -->
@@ -1831,11 +1848,11 @@ function dessinerChartTempsAttente(evolution, ssNom) {
         <div style="display:flex;gap:10px;justify-content:flex-end;">
             <button onclick="fermerModalRdv()" id="rdvBtnAnnuler"
                     style="padding:9px 18px;background:#f1f5f9;border:none;border-radius:8px;cursor:pointer;font-size:.85rem;font-family:inherit;color:#475569;">
-                Annuler
+                <?= __('cancel') ?>
             </button>
             <button onclick="confirmerRdv()" id="rdvBtnConfirmer"
                     style="padding:9px 18px;background:#3b82f6;border:none;border-radius:8px;cursor:pointer;font-size:.85rem;font-family:inherit;color:#fff;font-weight:600;">
-                <i class="fa-solid fa-calendar-check"></i> Confirmer le RDV
+                <i class="fa-solid fa-calendar-check"></i> <?= __('confirm_rdv') ?>
             </button>
         </div>
     </div>
@@ -1884,11 +1901,11 @@ function ouvrirModalRdv(consultationId, patientNom) {
     document.getElementById('rdvDate').value = '';
     document.getElementById('rdvMotif').value = '';
     document.getElementById('rdvCreneauxWrap').innerHTML =
-        '<p style="color:#94a3b8;font-size:.82rem;font-style:italic;">Sélectionnez d\'abord une date.</p>';
-    document.getElementById('rdvPatientLabel').textContent = 'Patient : ' + patientNom.trim();
+        `<p style="color:#94a3b8;font-size:.82rem;font-style:italic;">${t('rdv_select_date_first')}</p>`;
+    document.getElementById('rdvPatientLabel').textContent = t('patient_colon') + ' ' + patientNom.trim();
     document.getElementById('rdvConfirmation').style.display = 'none';
     document.getElementById('rdvBtnConfirmer').style.display = '';
-    document.getElementById('rdvBtnAnnuler').textContent = 'Annuler';
+    document.getElementById('rdvBtnAnnuler').textContent = t('cancel');
 
     const modal = document.getElementById('modalRdv');
     modal.style.display = 'flex';
@@ -1907,12 +1924,12 @@ function chargerCreneaux() {
 
     if (!date) {
         document.getElementById('rdvCreneauxWrap').innerHTML =
-            '<p style="color:#94a3b8;font-size:.82rem;font-style:italic;">Sélectionnez d\'abord une date.</p>';
+            `<p style="color:#94a3b8;font-size:.82rem;font-style:italic;">${t('rdv_select_date_first')}</p>`;
         return;
     }
 
     document.getElementById('rdvCreneauxWrap').innerHTML =
-        '<p style="color:#94a3b8;font-size:.82rem;"><i class="fa-solid fa-spinner fa-spin"></i> Chargement…</p>';
+        `<p style="color:#94a3b8;font-size:.82rem;"><i class="fa-solid fa-spinner fa-spin"></i> ${t('loading')}</p>`;
 
     fetch('medecin.php?action=get_creneaux_disponibles&date=' + encodeURIComponent(date))
         .then(r => r.json())
@@ -1924,14 +1941,14 @@ function chargerCreneaux() {
             }
             if (!d.creneaux || d.creneaux.length === 0) {
                 document.getElementById('rdvCreneauxWrap').innerHTML =
-                    '<p style="color:#f59e0b;font-size:.82rem;"><i class="fa-solid fa-triangle-exclamation"></i> Aucun créneau disponible ce jour-là.</p>';
+                    `<p style="color:#f59e0b;font-size:.82rem;"><i class="fa-solid fa-triangle-exclamation"></i> ${t('no_slot_available')}</p>`;
                 return;
             }
             let html = '<div class="creneaux-grid">';
             d.creneaux.forEach(c => {
                 html += `<button class="creneau-btn" data-heure="${c.heure}" onclick="selectionnerCreneau(this, '${c.heure}')">
                     ${c.heure}
-                    <span class="dispo">(${c.disponible} dispo)</span>
+                    <span class="dispo">(${c.disponible} ${t('spots_available')})</span>
                 </button>`;
             });
             html += '</div>';
@@ -1939,7 +1956,7 @@ function chargerCreneaux() {
         })
         .catch(() => {
             document.getElementById('rdvCreneauxWrap').innerHTML =
-                '<p style="color:#ef4444;font-size:.82rem;">Erreur réseau.</p>';
+                `<p style="color:#ef4444;font-size:.82rem;">${t('network_error')}</p>`;
         });
 }
 
@@ -1957,18 +1974,18 @@ function confirmerRdv() {
     const motif = document.getElementById('rdvMotif').value.trim();
 
     if (!date) {
-        afficherMessage('Veuillez sélectionner une date.', 'error');
+        afficherMessage(t('select_date_please'), 'error');
         return;
     }
     if (!_rdvHeureSelectionnee) {
-        afficherMessage('Veuillez sélectionner un créneau horaire.', 'error');
+        afficherMessage(t('select_slot_please'), 'error');
         return;
     }
 
     // Désactiver le bouton pendant l'envoi
     const btn = document.getElementById('rdvBtnConfirmer');
     btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enregistrement…';
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${t('saving')}`;
 
     const body = new URLSearchParams({
         consultation_id: _rdvConsultationId,
@@ -1985,29 +2002,29 @@ function confirmerRdv() {
     .then(r => r.json())
     .then(d => {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-calendar-check"></i> Confirmer le RDV';
+        btn.innerHTML = `<i class="fa-solid fa-calendar-check"></i> ${t('confirm_rdv')}`;
 
         if (d.success) {
             // Afficher la confirmation dans la modale
-            const dateF = new Date(d.date_rdv + 'T00:00:00').toLocaleDateString('fr-FR', {
+            const dateF = new Date(d.date_rdv + 'T00:00:00').toLocaleDateString('<?= \LangHelper::getLang() === "en" ? "en-US" : "fr-FR" ?>', {
                 weekday:'long', day:'2-digit', month:'long', year:'numeric'
             });
             document.getElementById('rdvConfirmation').style.display = 'block';
             document.getElementById('rdvConfirmation').innerHTML =
                 `<i class="fa-solid fa-circle-check" style="color:#16a34a;margin-right:6px;"></i>
-                 <strong>RDV confirmé</strong> — ${d.patient_nom} le <strong>${dateF}</strong> à <strong>${d.heure_rdv}</strong>.
-                 <br><span style="font-size:.78rem;color:#166534;">Le créneau a été automatiquement bloqué dans le planning.</span>`;
+                 <strong>${t('rdv_confirmed')}</strong> — ${d.patient_nom} le <strong>${dateF}</strong> à <strong>${d.heure_rdv}</strong>.
+                 <br><span style="font-size:.78rem;color:#166534;">${t('slot_auto_blocked')}</span>`;
             document.getElementById('rdvBtnConfirmer').style.display = 'none';
-            document.getElementById('rdvBtnAnnuler').textContent = 'Fermer';
-            afficherMessage('Rendez-vous planifié avec succès !', 'success');
+            document.getElementById('rdvBtnAnnuler').textContent = t('close_btn');
+            afficherMessage(t('rdv_planned'), 'success');
         } else {
-            afficherMessage(d.message || 'Impossible de créer le rendez-vous.', 'error');
+            afficherMessage(d.message || t('rdv_failed'), 'error');
         }
     })
     .catch(() => {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-calendar-check"></i> Confirmer le RDV';
-        afficherMessage('Erreur réseau.', 'error');
+        btn.innerHTML = `<i class="fa-solid fa-calendar-check"></i> ${t('confirm_rdv')}`;
+        afficherMessage(t('network_error'), 'error');
     });
 }
 

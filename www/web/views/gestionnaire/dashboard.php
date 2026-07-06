@@ -24,11 +24,11 @@ unset($_SESSION['message_action']);
 unset($_SESSION['type_message']);
 ?>
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="<?= \LangHelper::getLang() ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Tableau de bord — QueueCare</title>
+    <title><?= __('page_title_manager') ?></title>
     <link rel="icon" type="image/png" href="public/img/favicon-32.png">
     <link rel="icon" type="image/png" sizes="64x64" href="public/img/favicon-64.png">
     <link href="https://fonts.bunny.net/css?family=playfair-display:400,500,700|outfit:300,400,500,600,700&display=swap" rel="stylesheet">
@@ -86,9 +86,11 @@ unset($_SESSION['type_message']);
         @keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
         .refresh-indicator { position:fixed; bottom:20px; right:20px; background:#1a4db5; color:white; padding:8px 16px; border-radius:30px; font-size:.75rem; display:none; align-items:center; gap:8px; z-index:1000; }
         .refresh-indicator.show { display:flex; }
+        #messageContainer { position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:10050; width:92%; max-width:480px; pointer-events:none; display:flex; flex-direction:column; gap:10px; }
         .action-msg-success { background:#d1fae5; color:#065f46; }
         .action-msg-error { background:#fee2e2; color:#991b1b; }
-        .action-msg { padding:16px 20px; border-radius:12px; margin-bottom:24px; display:flex; align-items:center; gap:12px; }
+        .action-msg { padding:16px 20px; border-radius:12px; margin-bottom:0; display:flex; align-items:center; gap:12px; box-shadow:0 10px 30px rgba(13,29,67,.25); pointer-events:auto; animation: msgSlideIn .25s ease; }
+        @keyframes msgSlideIn { from { opacity:0; transform:translateY(-12px); } to { opacity:1; transform:translateY(0); } }
         .btn-sm { padding:6px 12px; border:none; border-radius:6px; cursor:pointer; font-size:.75rem; font-weight:600; margin:0 2px; }
         .btn-sm-green { background: #10b981; color: white; }
         .btn-sm-orange { background: #f59e0b; color: white; }
@@ -289,7 +291,7 @@ unset($_SESSION['type_message']);
 
     <div id="refreshIndicator" class="refresh-indicator">
         <i class="fa-solid fa-spinner fa-spin"></i>
-        <span>Mise à jour...</span>
+        <span><?= __('refreshing') ?></span>
     </div>
     
     <!-- Sidebar -->
@@ -299,12 +301,12 @@ unset($_SESSION['type_message']);
             <div class="sidebar-user"><div class="sidebar-avatar"><?= $initiale ?></div><div class="sidebar-user-info"><div class="sidebar-user-name"><?= htmlspecialchars(explode(' ', $gestionnaireNom)[0]) ?></div><div class="sidebar-user-service"><?= htmlspecialchars($sousService['nom']) ?></div></div></div>
         </div>
         <nav class="sidebar-nav">
-            <div class="nav-item" data-section="file" onclick="showSection('file')"><i class="fa-solid fa-list-ol"></i><span>File d'attente</span></div>
-            <div class="nav-item" data-section="consultations" onclick="showSection('consultations')"><i class="fa-solid fa-calendar-day"></i><span>Consultations du jour</span></div>
-            <div class="nav-item" data-section="stats" onclick="showSection('stats')"><i class="fa-solid fa-chart-simple"></i><span>Statistiques</span></div>
-            <div class="nav-item" data-section="planning" onclick="showSection('planning')"><i class="fa-solid fa-calendar-week"></i><span>Emploi du temps</span></div>
-            <div class="nav-item" data-section="historique" onclick="showSection('historique')"><i class="fa-solid fa-clock-rotate-left"></i><span>Historique</span></div>
-            <div class="nav-item" data-section="profil" onclick="showSection('profil')"><i class="fa-solid fa-user"></i><span>Mon profil</span></div>
+            <div class="nav-item" data-section="file" onclick="showSection('file')"><i class="fa-solid fa-list-ol"></i><span><?= __('queue') ?></span></div>
+            <div class="nav-item" data-section="consultations" onclick="showSection('consultations')"><i class="fa-solid fa-calendar-day"></i><span><?= __('today_consultations') ?></span></div>
+            <div class="nav-item" data-section="stats" onclick="showSection('stats')"><i class="fa-solid fa-chart-simple"></i><span><?= __('statistics') ?></span></div>
+            <div class="nav-item" data-section="planning" onclick="showSection('planning')"><i class="fa-solid fa-calendar-week"></i><span><?= __('work_schedule') ?></span></div>
+            <div class="nav-item" data-section="historique" onclick="showSection('historique')"><i class="fa-solid fa-clock-rotate-left"></i><span><?= __('history') ?></span></div>
+            <div class="nav-item" data-section="profil" onclick="showSection('profil')"><i class="fa-solid fa-user"></i><span><?= __('my_profile') ?></span></div>
         </nav>
         <div class="sidebar-footer">
             <!-- Sélecteur de langue -->
@@ -313,15 +315,15 @@ unset($_SESSION['type_message']);
                 <span class="lang-label"><i class="fa-solid fa-language"></i></span>
                 <button type="button" class="lang-toggle-btn <?= $currentLang==='fr'?'active':'' ?>"
                         onclick="dashChangerLangueGest('fr')">
-                    🇫🇷 Français
+                    🇫🇷 <?= __('lang_fr_full') ?>
                 </button>
                 <button type="button" class="lang-toggle-btn <?= $currentLang==='en'?'active':'' ?>"
                         onclick="dashChangerLangueGest('en')">
-                    🇬🇧 English
+                    🇬🇧 <?= __('lang_en_full') ?>
                 </button>
             </div>
-            <a href="accueil.php" class="logout-btn" style="margin-bottom:8px;"><i class="fa-solid fa-house"></i><span>Accueil</span></a>
-            <a href="gestionnaire.php?action=deconnexion" class="logout-btn"><i class="fa-solid fa-right-from-bracket"></i><span>Déconnexion</span></a>
+            <a href="accueil.php" class="logout-btn" style="margin-bottom:8px;"><i class="fa-solid fa-house"></i><span><?= __('sidebar_home') ?></span></a>
+            <a href="gestionnaire.php?action=deconnexion" class="logout-btn"><i class="fa-solid fa-right-from-bracket"></i><span><?= __('sidebar_logout') ?></span></a>
         </div>
     </aside>
     
@@ -332,16 +334,16 @@ unset($_SESSION['type_message']);
                 <button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Menu">
                     <span></span><span></span><span></span>
                 </button>
-                <h1 class="page-title">Tableau de bord</h1>
+                <h1 class="page-title"><?= __('dashboard') ?></h1>
             </div>
-            <div><button class="btn-icon" onclick="window.location.reload()"><i class="fa-solid fa-rotate-right"></i> Actualiser</button><button class="btn-primary" onclick="ouvrirModalChoix()"><i class="fa-solid fa-user-plus"></i> <span>Nouvelle consultation</span></button></div>
+            <div><button class="btn-icon" onclick="window.location.reload()"><i class="fa-solid fa-rotate-right"></i> <?= __('refresh') ?></button><button class="btn-primary" onclick="ouvrirModalChoix()"><i class="fa-solid fa-user-plus"></i> <span><?= __('new_consultation') ?></span></button></div>
         </div>
         
         <div class="dashboard-content">
             
             <div id="timeoutBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#c2410c;color:#fff;padding:12px 24px;align-items:center;justify-content:space-between;gap:16px;font-size:.9rem;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.3);">
-                <span><i class="fa-solid fa-triangle-exclamation"></i> Votre session expire dans moins d'1 minute.</span>
-                <button onclick="document.getElementById('timeoutBanner').style.display='none';resetIdleTimer();">Rester connecté</button>
+                <span><i class="fa-solid fa-triangle-exclamation"></i> <?= __('session_expiring') ?></span>
+                <button onclick="document.getElementById('timeoutBanner').style.display='none';resetIdleTimer();"><?= __('stay_connected') ?></button>
             </div>
             
             <div id="messageContainer">
@@ -352,7 +354,7 @@ unset($_SESSION['type_message']);
             
             <!-- Section File d'attente -->
             <div id="section-file" class="section">
-                <div class="section-header"><span class="section-title"><i class="fa-solid fa-list-ol"></i> File d'attente</span><span id="fileCount" class="badge badge-green"><?= count($file) ?> patient(s)</span></div>
+                <div class="section-header"><span class="section-title"><i class="fa-solid fa-list-ol"></i> <?= __('queue') ?></span><span id="fileCount" class="badge badge-green"><?= count($file) ?> <?= __('patient_s') ?></span></div>
                 <div id="medecinFilterBar" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;"></div>
                 <div id="filePills" class="statut-pills"></div>
                 <div id="fileContent">
@@ -365,19 +367,32 @@ unset($_SESSION['type_message']);
                     });
                     ?>
                     <?php if (empty($file)): ?>
-                    <div class="empty-state">Aucun patient en attente.</div>
+                    <div class="empty-state"><?= __('no_patient_waiting') ?></div>
                     <?php else: ?>
                     <div style="overflow-x:auto;">
-                        <table class="file-table"><thead><tr><th>Rang</th><th>Patient</th><th>Téléphone</th><th>Heure</th><th>Mode</th><th>Statut</th><th>Actions</th></tr></thead><tbody>
+                        <table class="file-table"><thead><tr><th><?= __('rank') ?></th><th><?= __('patient') ?></th><th><?= __('phone') ?></th><th><?= __('expected_time') ?></th><th><?= __('mode_label') ?></th><th><?= __('status') ?></th><th><?= __('actions') ?></th></tr></thead><tbody>
                         <?php foreach ($file as $c): ?>
                         <tr>
                             <td><div class="rang-badge <?= $c['statut'] === 'en_cours' ? 'actif' : '' ?>"><?= (int)$c['rang'] ?></div></td>
                             <td><strong><?= htmlspecialchars($c['patient_nom'] . ' ' . $c['patient_prenom']) ?></strong></td>
                             <td><?= htmlspecialchars($c['telephone']) ?></td>
                             <td><?= $c['heure_passage_estimee'] ? date('H:i', strtotime($c['heure_passage_estimee'])) : '—' ?></td>
-                            <td><?= $c['mode_prise'] === 'LIGNE' ? '<span class="badge badge-blue">En ligne</span>' : '<span class="badge badge-green">Sur place</span>' ?></td>
-                            <td><?php $bc2 = match($c['statut']) { 'en_cours' => 'badge-blue', 'traite' => 'badge-green', 'annule','absent' => 'badge-red', 'en_pause' => 'badge-grey', default => 'badge-grey' }; $lb2 = match($c['statut']) { 'traite' => 'Traitée', 'en_cours' => 'En cours', 'annule' => 'Annulée', 'absent' => 'Absent', 'en_attente' => 'En attente', 'confirme' => 'Confirmé', 'en_pause' => 'En pause', default => $c['statut'] }; ?><span class="badge <?= $bc2 ?>"><?= $lb2 ?></span></td>
-                            <td><?php if(!in_array($c['statut'],['traite','annule','absent'])): ?><div style="display:flex;gap:5px;"><button onclick="soumettreActionG(<?= (int)$c['id'] ?>,'absent')" class="btn-sm btn-sm-orange"><i class="fa-solid fa-user-slash"></i> Absent</button><button onclick="soumettreActionG(<?= (int)$c['id'] ?>,'annule')" class="btn-sm btn-sm-red"><i class="fa-solid fa-xmark"></i> Annuler</button></div><?php endif; ?></td>
+                            <td><?= $c['mode_prise'] === 'LIGNE' ? '<span class="badge badge-blue">' . __('online_mode') . '</span>' : '<span class="badge badge-green">' . __('onsite_mode') . '</span>' ?></td>
+                            <td><?php $bc2 = match($c['statut']) { 'en_cours' => 'badge-blue', 'traite' => 'badge-green', 'annule','absent' => 'badge-red', 'en_pause' => 'badge-grey', default => 'badge-grey' }; $lb2 = match($c['statut']) { 'traite' => __('status_treated'), 'en_cours' => __('status_in_progress'), 'annule' => __('status_cancelled'), 'absent' => __('status_absent'), 'en_attente' => __('status_waiting'), 'confirme' => __('status_confirmed'), 'en_pause' => __('status_paused'), default => $c['statut'] }; ?><span class="badge <?= $bc2 ?>"><?= $lb2 ?></span></td>
+                            <td>
+                                <?php if ($c['statut'] === 'en_pause'): ?>
+                                    <?php if (!empty($c['priorite_retour'])): ?>
+                                        <button class="btn-sm btn-sm-resume" disabled style="opacity:.6;cursor:default;"><i class="fa-solid fa-bell"></i> <?= __('doctor_alerted') ?></button>
+                                    <?php else: ?>
+                                        <button class="btn-sm btn-sm-resume" onclick="signalerRetourPatientG(<?= (int)$c['id'] ?>)"><i class="fa-solid fa-bell"></i> 🔔 Patient revenu</button>
+                                    <?php endif; ?>
+                                <?php elseif (!in_array($c['statut'], ['traite', 'annule', 'absent', 'en_cours'])): ?>
+                                    <div style="display:flex;gap:5px;">
+                                        <button onclick="soumettreActionG(<?= (int)$c['id'] ?>,'absent')" class="btn-sm btn-sm-orange"><i class="fa-solid fa-user-slash"></i> <?= __('absent_btn') ?></button>
+                                        <button onclick="soumettreActionG(<?= (int)$c['id'] ?>,'annule')" class="btn-sm btn-sm-red"><i class="fa-solid fa-xmark"></i> <?= __('cancel_btn') ?></button>
+                                    </div>
+                                <?php endif; ?>
+                            </td>
                         </tr>
                         <?php endforeach; ?>
                         </tbody>
@@ -389,7 +404,7 @@ unset($_SESSION['type_message']);
             
             <!-- Section Consultations -->
             <div id="section-consultations" class="section" style="display:none;">
-                <div class="section-header"><span class="section-title"><i class="fa-solid fa-calendar-day"></i> Consultations du jour</span><span id="consultationsCount" class="badge badge-blue"><?= count($consultations) ?></span></div>
+                <div class="section-header"><span class="section-title"><i class="fa-solid fa-calendar-day"></i> <?= __('today_consultations') ?></span><span id="consultationsCount" class="badge badge-blue"><?= count($consultations) ?></span></div>
                 <div id="consultsPills" class="statut-pills"></div>
                 <div id="consultationsContent">
                     <?php
@@ -401,17 +416,31 @@ unset($_SESSION['type_message']);
                     });
                     ?>
                     <?php if (empty($consultations)): ?>
-                    <div class="empty-state">Aucune consultation.</div>
+                    <div class="empty-state"><?= __('no_consultations') ?></div>
                     <?php else: ?>
                     <div style="overflow-x:auto;">
-                        <table class="file-table"><thead><tr><th>#</th><th>Patient</th><th>Médecin</th><th>Heure</th><th>Statut</th></tr></thead><tbody>
+                        <table class="file-table"><thead><tr><th>#</th><th><?= __('patient') ?></th><th><?= __('doctor') ?></th><th><?= __('expected_time') ?></th><th><?= __('status') ?></th><th><?= __('actions') ?></th></tr></thead><tbody>
                         <?php foreach ($consultations as $c): ?>
                         <tr>
                             <td><?= (int)$c['rang'] ?></td>
                             <td><strong><?= htmlspecialchars($c['patient_nom'] . ' ' . $c['patient_prenom']) ?></strong></td>
                             <td><?= $c['medecin_nom'] ? htmlspecialchars($c['medecin_nom']) : '—' ?></td>
                             <td><?= $c['heure_passage_estimee'] ? date('H:i', strtotime($c['heure_passage_estimee'])) : '—' ?></td>
-                            <td><?php $bc = match($c['statut']) { 'traite' => 'badge-green', 'en_cours' => 'badge-blue', 'annule','absent' => 'badge-red', default => 'badge-grey' }; $lb = match($c['statut']) { 'traite' => 'Traitée', 'en_cours' => 'En cours', 'annule' => 'Annulée', 'absent' => 'Absent', 'en_attente' => 'En attente', 'confirme' => 'Confirmé', 'en_pause' => 'En pause', default => $c['statut'] }; ?><span class="badge <?= $bc ?>"><?= $lb ?></span></td>
+                            <td><?php $bc = match($c['statut']) { 'traite' => 'badge-green', 'en_cours' => 'badge-blue', 'annule','absent' => 'badge-red', default => 'badge-grey' }; $lb = match($c['statut']) { 'traite' => __('status_treated'), 'en_cours' => __('status_in_progress'), 'annule' => __('status_cancelled'), 'absent' => __('status_absent'), 'en_attente' => __('status_waiting'), 'confirme' => __('status_confirmed'), 'en_pause' => __('status_paused'), default => $c['statut'] }; ?><span class="badge <?= $bc ?>"><?= $lb ?></span></td>
+                            <td>
+                                <?php if ($c['statut'] === 'en_pause'): ?>
+                                    <?php if (!empty($c['priorite_retour'])): ?>
+                                        <button class="btn-sm btn-sm-resume" disabled style="opacity:.6;cursor:default;"><i class="fa-solid fa-bell"></i> <?= __('doctor_alerted') ?></button>
+                                    <?php else: ?>
+                                        <button class="btn-sm btn-sm-resume" onclick="signalerRetourPatientG(<?= (int)$c['id'] ?>)"><i class="fa-solid fa-bell"></i> 🔔 Patient revenu</button>
+                                    <?php endif; ?>
+                                <?php elseif (!in_array($c['statut'], ['traite', 'annule', 'absent', 'en_cours'])): ?>
+                                    <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                                        <button onclick="soumettreActionG(<?= (int)$c['id'] ?>,'absent')" class="btn-sm btn-sm-orange"><i class="fa-solid fa-user-slash"></i> <?= __('absent_btn') ?></button>
+                                        <button onclick="soumettreActionG(<?= (int)$c['id'] ?>,'annule')" class="btn-sm btn-sm-red"><i class="fa-solid fa-xmark"></i> <?= __('cancel_btn') ?></button>
+                                    </div>
+                                <?php endif; ?>
+                            </td>
                         </tr>
                         <?php endforeach; ?>
                         </tbody>
@@ -428,78 +457,79 @@ unset($_SESSION['type_message']);
                     <div class="stat-card total">
                         <div class="stat-icon"><i class="fa-solid fa-chart-line"></i></div>
                         <div class="stat-value" id="statTotal"><?= (int)($stats['total'] ?? 0) ?></div>
-                        <div class="stat-label">Total consultations (jour)</div>
+                        <div class="stat-label"><?= __('total_consultations_day') ?></div>
                     </div>
                     <div class="stat-card traitees">
                         <div class="stat-icon"><i class="fa-solid fa-circle-check"></i></div>
                         <div class="stat-value" id="statTraitees"><?= (int)($stats['traitees'] ?? 0) ?></div>
-                        <div class="stat-label">Consultations traitées</div>
+                        <div class="stat-label"><?= __('treated_consultations') ?></div>
                     </div>
                     <div class="stat-card en-attente">
                         <div class="stat-icon"><i class="fa-solid fa-hourglass-half"></i></div>
                         <div class="stat-value" id="statEnAttente"><?= (int)($stats['en_attente'] ?? 0) ?></div>
-                        <div class="stat-label">En attente</div>
+                        <div class="stat-label"><?= __('waiting') ?></div>
                     </div>
                     <div class="stat-card absents">
                         <div class="stat-icon"><i class="fa-solid fa-user-slash"></i></div>
                         <div class="stat-value" id="statAbsentes"><?= (int)($stats['absentes'] ?? 0) ?></div>
-                        <div class="stat-label">Patients absents</div>
+                        <div class="stat-label"><?= __('absent_patients') ?></div>
                     </div>
                     <div class="stat-card annulees">
                         <div class="stat-icon"><i class="fa-solid fa-ban"></i></div>
                         <div class="stat-value" id="statAnnulees"><?= (int)($stats['annulees'] ?? 0) ?></div>
-                        <div class="stat-label">Consultations annulées</div>
+                        <div class="stat-label"><?= __('cancelled_consultations') ?></div>
                     </div>
                     <div class="stat-card en-ligne">
                         <div class="stat-icon"><i class="fa-solid fa-wifi"></i></div>
                         <div class="stat-value" id="statEnLigne"><?= (int)($stats['en_ligne'] ?? 0) ?></div>
-                        <div class="stat-label">Prises en ligne</div>
+                        <div class="stat-label"><?= __('online_bookings') ?></div>
                     </div>
                     <div class="stat-card sur-place">
                         <div class="stat-icon"><i class="fa-solid fa-building"></i></div>
                         <div class="stat-value" id="statSurPlace"><?= (int)($stats['sur_place'] ?? 0) ?></div>
-                        <div class="stat-label">Prises sur place</div>
+                        <div class="stat-label"><?= __('onsite_bookings') ?></div>
                     </div>
                 </div>
 
                 <!-- Filtres période (graphiques) -->
                 <div class="section" style="margin-bottom:16px;padding:16px 20px;">
                     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-                        <span style="font-weight:600;font-size:.9rem;color:#1a4db5;"><i class="fa-solid fa-calendar-range"></i> Période :</span>
+                        <span style="font-weight:600;font-size:.9rem;color:#1a4db5;"><i class="fa-solid fa-calendar-range"></i> <?= __('period_label') ?></span>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                            <button class="btn-periode active" data-jours="7" onclick="changerPeriodeG(this,7)">7 jours</button>
-                            <button class="btn-periode" data-jours="30" onclick="changerPeriodeG(this,30)">30 jours</button>
-                            <button class="btn-periode" data-jours="90" onclick="changerPeriodeG(this,90)">3 mois</button>
-                            <button class="btn-periode" data-jours="365" onclick="changerPeriodeG(this,365)">1 an</button>
+                            <button class="btn-periode" data-jours="0" onclick="changerPeriodeG(this,0)"><?= __('today_btn') ?></button>
+                            <button class="btn-periode active" data-jours="7" onclick="changerPeriodeG(this,7)"><?= __('days_7') ?></button>
+                            <button class="btn-periode" data-jours="30" onclick="changerPeriodeG(this,30)"><?= __('days_30') ?></button>
+                            <button class="btn-periode" data-jours="90" onclick="changerPeriodeG(this,90)"><?= __('months_3') ?></button>
+                            <button class="btn-periode" data-jours="365" onclick="changerPeriodeG(this,365)"><?= __('year_1') ?></button>
                         </div>
                     </div>
                 </div>
 
                 <!-- Cards résumé période -->
                 <div class="stats-grid" id="statsGridPeriodeG">
-                    <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-users"></i></div><div class="stat-value" id="statTotalPeriodeG">—</div><div class="stat-label">Total (période)</div></div>
-                    <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-circle-check"></i></div><div class="stat-value" id="statTraiteesPeriodeG">—</div><div class="stat-label">Traitées (période)</div></div>
-                    <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-user-slash"></i></div><div class="stat-value" id="statAbsentesPeriodeG">—</div><div class="stat-label">Absents (période)</div></div>
-                    <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-ban"></i></div><div class="stat-value" id="statAnnuleesPeriodeG">—</div><div class="stat-label">Annulées (période)</div></div>
-                    <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-clock"></i></div><div class="stat-value" id="statDureeMoyPeriodeG">—</div><div class="stat-label">Durée moy.</div></div>
+                    <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-users"></i></div><div class="stat-value" id="statTotalPeriodeG">—</div><div class="stat-label"><?= __('total_period') ?></div></div>
+                    <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-circle-check"></i></div><div class="stat-value" id="statTraiteesPeriodeG">—</div><div class="stat-label"><?= __('treated_period') ?></div></div>
+                    <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-user-slash"></i></div><div class="stat-value" id="statAbsentesPeriodeG">—</div><div class="stat-label"><?= __('absent_period') ?></div></div>
+                    <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-ban"></i></div><div class="stat-value" id="statAnnuleesPeriodeG">—</div><div class="stat-label"><?= __('cancelled_period') ?></div></div>
+                    <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-clock"></i></div><div class="stat-value" id="statDureeMoyPeriodeG">—</div><div class="stat-label"><?= __('avg_duration') ?></div></div>
                 </div>
 
                 <!-- Graphiques -->
                 <div class="section" style="margin-bottom:20px;">
                     <div class="section-header">
-                        <span class="section-title"><i class="fa-solid fa-chart-line"></i> Évolution des consultations — Tout le sous-service</span>
-                        <div id="statsChargementG" style="font-size:.8rem;color:#64748b;"><i class="fa-solid fa-spinner fa-spin"></i> Chargement...</div>
+                        <span class="section-title"><i class="fa-solid fa-chart-line"></i> <?= __('evolution_all_subservice') ?></span>
+                        <div id="statsChargementG" style="font-size:.8rem;color:#64748b;"><i class="fa-solid fa-spinner fa-spin"></i> <?= __('loading') ?></div>
                     </div>
                     <canvas id="chartEvolutionG" style="max-height:300px;"></canvas>
                 </div>
 
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;" class="charts-double-col">
                     <div class="section">
-                        <div class="section-header"><span class="section-title"><i class="fa-solid fa-chart-pie"></i> Répartition par statut</span></div>
+                        <div class="section-header"><span class="section-title"><i class="fa-solid fa-chart-pie"></i> <?= __('status_breakdown') ?></span></div>
                         <canvas id="chartDonutG" style="max-height:260px;"></canvas>
                     </div>
                     <div class="section">
-                        <div class="section-header"><span class="section-title"><i class="fa-solid fa-chart-bar"></i> Consultations par jour de semaine</span></div>
+                        <div class="section-header"><span class="section-title"><i class="fa-solid fa-chart-bar"></i> <?= __('consultations_per_weekday') ?></span></div>
                         <canvas id="chartBarJourG" style="max-height:260px;"></canvas>
                     </div>
                 </div>
@@ -507,51 +537,51 @@ unset($_SESSION['type_message']);
                 <!-- Répartition par médecin -->
                 <div class="section" style="margin-bottom:20px;">
                     <div class="section-header">
-                        <span class="section-title"><i class="fa-solid fa-user-doctor"></i> Activité par médecin — Comparatif</span>
+                        <span class="section-title"><i class="fa-solid fa-user-doctor"></i> <?= __('doctor_activity_compare') ?></span>
                     </div>
                     <canvas id="chartParMedecinG" style="max-height:320px;"></canvas>
-                    <div id="parMedecinEmptyG" style="display:none;text-align:center;padding:24px;color:#94a3b8;font-size:.85rem;">Aucun médecin affecté à ce sous-service.</div>
+                    <div id="parMedecinEmptyG" style="display:none;text-align:center;padding:24px;color:#94a3b8;font-size:.85rem;"><?= __('no_doctor_assigned') ?></div>
                 </div>
 
                 <!-- Section Temps d'attente moyen -->
                 <div class="section" style="margin-bottom:20px;">
                     <div class="section-header">
-                        <span class="section-title"><i class="fa-solid fa-hourglass-half" style="color:#f59e0b;"></i> Temps d'attente moyen des patients — Tout le sous-service</span>
-                        <div id="attenteChargementG" style="font-size:.8rem;color:#64748b;"><i class="fa-solid fa-spinner fa-spin"></i> Chargement...</div>
+                        <span class="section-title"><i class="fa-solid fa-hourglass-half" style="color:#f59e0b;"></i> <?= __('avg_wait_time_subservice') ?></span>
+                        <div id="attenteChargementG" style="font-size:.8rem;color:#64748b;"><i class="fa-solid fa-spinner fa-spin"></i> <?= __('loading') ?></div>
                     </div>
                     <!-- Cards résumé attente -->
                     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px;">
                         <div class="stat-card" style="border-top:3px solid #f59e0b;">
                             <div class="stat-icon" style="color:#f59e0b;"><i class="fa-solid fa-clock"></i></div>
                             <div class="stat-value" id="attenteGlobalG">—</div>
-                            <div class="stat-label">Temps moyen global (depuis le début)</div>
+                            <div class="stat-label"><?= __('avg_wait_global') ?></div>
                         </div>
                         <div class="stat-card" style="border-top:3px solid #3b82f6;">
                             <div class="stat-icon" style="color:#3b82f6;"><i class="fa-solid fa-calendar-week"></i></div>
                             <div class="stat-value" id="attente7jG">—</div>
-                            <div class="stat-label">Temps moyen (7 derniers jours)</div>
+                            <div class="stat-label"><?= __('avg_wait_7d') ?></div>
                         </div>
                         <div class="stat-card" style="border-top:3px solid #10b981;">
                             <div class="stat-icon" style="color:#10b981;"><i class="fa-solid fa-calendar-days"></i></div>
                             <div class="stat-value" id="attente30jG">—</div>
-                            <div class="stat-label">Temps moyen (30 derniers jours)</div>
+                            <div class="stat-label"><?= __('avg_wait_30d') ?></div>
                         </div>
                         <div class="stat-card" style="border-top:3px solid #6366f1;">
                             <div class="stat-icon" style="color:#6366f1;"><i class="fa-solid fa-stethoscope"></i></div>
                             <div class="stat-value" id="attenteNbMesuresG">—</div>
-                            <div class="stat-label">Consultations mesurées</div>
+                            <div class="stat-label"><?= __('measured_consultations') ?></div>
                         </div>
                     </div>
                     <!-- Tendance (indicateur comparaison) -->
                     <div id="attenteTendanceG" style="background:#f8fafc;border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:.85rem;color:#475569;display:none;"></div>
                     <!-- Graphique évolution -->
                     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
-                        <span style="font-size:.82rem;font-weight:600;color:#475569;">Période du graphique :</span>
-                        <button class="btn-periode active" data-attg="30" onclick="changerPeriodeAttenteG(this,30)">30 jours</button>
-                        <button class="btn-periode" data-attg="90" onclick="changerPeriodeAttenteG(this,90)">3 mois</button>
-                        <button class="btn-periode" data-attg="180" onclick="changerPeriodeAttenteG(this,180)">6 mois</button>
-                        <button class="btn-periode" data-attg="365" onclick="changerPeriodeAttenteG(this,365)">1 an</button>
-                        <button class="btn-periode" data-attg="9999" onclick="changerPeriodeAttenteG(this,9999)">Depuis le début</button>
+                        <span style="font-size:.82rem;font-weight:600;color:#475569;"><?= __('chart_period') ?></span>
+                        <button class="btn-periode active" data-attg="30" onclick="changerPeriodeAttenteG(this,30)"><?= __('days_30') ?></button>
+                        <button class="btn-periode" data-attg="90" onclick="changerPeriodeAttenteG(this,90)"><?= __('months_3') ?></button>
+                        <button class="btn-periode" data-attg="180" onclick="changerPeriodeAttenteG(this,180)"><?= __('months_6') ?></button>
+                        <button class="btn-periode" data-attg="365" onclick="changerPeriodeAttenteG(this,365)"><?= __('year_1') ?></button>
+                        <button class="btn-periode" data-attg="9999" onclick="changerPeriodeAttenteG(this,9999)"><?= __('since_beginning') ?></button>
                     </div>
                     <canvas id="chartTempsAttenteG" style="max-height:280px;"></canvas>
                 </div>
@@ -559,13 +589,13 @@ unset($_SESSION['type_message']);
             
             <!-- Section Emploi du temps -->
             <div id="section-planning" class="section" style="display:none;">
-                <div class="section-header"><span class="section-title"><i class="fa-solid fa-calendar-week"></i> Emploi du temps</span><button class="btn-icon" onclick="chargerEmploiTemps()"><i class="fa-solid fa-rotate-right"></i> Rafraîchir</button></div>
+                <div class="section-header"><span class="section-title"><i class="fa-solid fa-calendar-week"></i> <?= __('work_schedule') ?></span><button class="btn-icon" onclick="chargerEmploiTemps()"><i class="fa-solid fa-rotate-right"></i> <?= __('refresh') ?></button></div>
 
                 <!-- Sélecteur de médecin -->
                 <div style="margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-                    <label for="selectMedecin" style="font-size:.85rem;font-weight:600;color:#0a2b5e;white-space:nowrap;"><i class="fa-solid fa-user-doctor" style="color:#1a4db5;margin-right:6px;"></i>Médecin :</label>
+                    <label for="selectMedecin" style="font-size:.85rem;font-weight:600;color:#0a2b5e;white-space:nowrap;"><i class="fa-solid fa-user-doctor" style="color:#1a4db5;margin-right:6px;"></i><?= __('doctor_colon') ?></label>
                     <select id="selectMedecin" onchange="chargerEmploiTemps()" style="padding:8px 14px;border:1.5px solid #c8dff2;border-radius:10px;font-family:inherit;font-size:.875rem;color:#0a2b5e;background:#fff;cursor:pointer;min-width:220px;">
-                        <option value="">— Tous les médecins —</option>
+                        <option value=""><?= __('all_doctors') ?></option>
                         <?php foreach ($medecins as $m): ?>
                         <option value="<?= (int)$m['id'] ?>"><?= htmlspecialchars($m['prenom'] . ' ' . $m['nom']) ?></option>
                         <?php endforeach; ?>
@@ -580,19 +610,19 @@ unset($_SESSION['type_message']);
                 $hPauF = !empty($serviceHoraires['pause_fin']) ? substr($serviceHoraires['pause_fin'],0,5) : null;
                 ?>
                 <div class="planning-info-bar">
-                    <span><i class="fa-solid fa-hospital" style="color:#1a4db5;margin-right:5px;"></i>Horaires : <strong><?= $hOuv ?> – <?= $hFer ?></strong></span>
+                    <span><i class="fa-solid fa-hospital" style="color:#1a4db5;margin-right:5px;"></i><?= __('hours_label') ?> : <strong><?= $hOuv ?> – <?= $hFer ?></strong></span>
                     <?php if ($hPauD && $hPauF): ?>
-                    <span>•</span><span><i class="fa-solid fa-utensils" style="color:#d97706;margin-right:5px;"></i>Pause : <strong><?= $hPauD ?> – <?= $hPauF ?></strong></span>
+                    <span>•</span><span><i class="fa-solid fa-utensils" style="color:#d97706;margin-right:5px;"></i><?= __('break_label') ?> : <strong><?= $hPauD ?> – <?= $hPauF ?></strong></span>
                     <?php endif; ?>
                 </div>
 
                 <!-- Légende -->
                 <div class="planning-legend">
-                    <div style="display:flex;align-items:center;gap:6px;"><div class="legend-dot" style="background:#bfdbfe;border-left:3px solid #3b82f6;border-radius:3px;"></div><span>Programmée</span></div>
-                    <div style="display:flex;align-items:center;gap:6px;"><div class="legend-dot" style="background:#bbf7d0;border-left:3px solid #10b981;border-radius:3px;"></div><span>En cours</span></div>
-                    <div style="display:flex;align-items:center;gap:6px;"><div class="legend-dot" style="background:#e2e8f0;border-left:3px solid #94a3b8;border-radius:3px;"></div><span>Traité</span></div>
-                    <div style="display:flex;align-items:center;gap:6px;"><div class="legend-dot" style="background:#fde68a;border-left:3px solid #f59e0b;border-radius:3px;"></div><span>Pause</span></div>
-                    <div style="display:flex;align-items:center;gap:6px;"><div class="legend-dot" style="background:repeating-linear-gradient(45deg,#f8fafc,#f8fafc 4px,#f1f5f9 4px,#f1f5f9 9px);border:1px solid #e2e8f0;border-radius:3px;"></div><span>Repos/fermé</span></div>
+                    <div style="display:flex;align-items:center;gap:6px;"><div class="legend-dot" style="background:#bfdbfe;border-left:3px solid #3b82f6;border-radius:3px;"></div><span><?= __('legend_scheduled') ?></span></div>
+                    <div style="display:flex;align-items:center;gap:6px;"><div class="legend-dot" style="background:#bbf7d0;border-left:3px solid #10b981;border-radius:3px;"></div><span><?= __('legend_in_progress') ?></span></div>
+                    <div style="display:flex;align-items:center;gap:6px;"><div class="legend-dot" style="background:#e2e8f0;border-left:3px solid #94a3b8;border-radius:3px;"></div><span><?= __('legend_treated') ?></span></div>
+                    <div style="display:flex;align-items:center;gap:6px;"><div class="legend-dot" style="background:#fde68a;border-left:3px solid #f59e0b;border-radius:3px;"></div><span><?= __('legend_paused') ?></span></div>
+                    <div style="display:flex;align-items:center;gap:6px;"><div class="legend-dot" style="background:repeating-linear-gradient(45deg,#f8fafc,#f8fafc 4px,#f1f5f9 4px,#f1f5f9 9px);border:1px solid #e2e8f0;border-radius:3px;"></div><span><?= __('legend_rest_closed') ?></span></div>
                 </div>
 
                 <!-- Bannière médecin sélectionné (injectée par JS) -->
@@ -600,76 +630,81 @@ unset($_SESSION['type_message']);
 
                 <div class="semaine-nav">
                     <div class="semaine-nav-buttons">
-                        <button class="btn-icon" onclick="changerSemaine(-1)"><i class="fa-solid fa-chevron-left"></i> Semaine préc.</button>
-                        <button class="btn-icon" onclick="changerSemaine(0)"><i class="fa-solid fa-calendar-day"></i> Aujourd'hui</button>
-                        <button class="btn-icon" onclick="changerSemaine(1)">Semaine suiv. <i class="fa-solid fa-chevron-right"></i></button>
+                        <button class="btn-icon" onclick="changerSemaine(-1)"><i class="fa-solid fa-chevron-left"></i> <?= __('prev_week') ?></button>
+                        <button class="btn-icon" onclick="changerSemaine(0)"><i class="fa-solid fa-calendar-day"></i> <?= __('today_btn') ?></button>
+                        <button class="btn-icon" onclick="changerSemaine(1)"><?= __('next_week') ?> <i class="fa-solid fa-chevron-right"></i></button>
                     </div>
-                    <div id="semaineLabel" class="semaine-label">Chargement...</div>
+                    <div id="semaineLabel" class="semaine-label"><?= __('loading') ?></div>
                 </div>
-                <div id="planningContainer"><div id="planningLoading" class="planning-loading"><i class="fa-solid fa-spinner fa-spin"></i><p>Chargement...</p></div><div id="planningTable" style="display:none;"></div></div>
+                <div id="planningContainer"><div id="planningLoading" class="planning-loading"><i class="fa-solid fa-spinner fa-spin"></i><p><?= __('loading') ?></p></div><div id="planningTable" style="display:none;"></div></div>
             </div>
             
             <!-- Section Historique -->
             <div id="section-historique" class="section" style="display:none;">
                 <div class="section-header">
-                    <span class="section-title"><i class="fa-solid fa-clock-rotate-left"></i> Historique des consultations</span>
+                    <span class="section-title"><i class="fa-solid fa-clock-rotate-left"></i> <?= __('consultation_history') ?></span>
                     <span id="historiqueTotal" class="badge badge-grey">—</span>
                 </div>
                 <!-- Filtres -->
                 <div id="histPills" class="statut-pills"></div>
                 <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;padding:14px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;">
                     <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:140px;">
-                        <label style="font-size:.72rem;font-weight:600;color:#475569;">Du</label>
+                        <label style="font-size:.72rem;font-weight:600;color:#475569;"><?= __('from') ?></label>
                         <input type="date" id="histDateDebut" onchange="chargerHistoriqueG(1)" style="padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.82rem;font-family:inherit;">
                     </div>
                     <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:140px;">
-                        <label style="font-size:.72rem;font-weight:600;color:#475569;">Au</label>
+                        <label style="font-size:.72rem;font-weight:600;color:#475569;"><?= __('to') ?></label>
                         <input type="date" id="histDateFin" onchange="chargerHistoriqueG(1)" style="padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.82rem;font-family:inherit;">
                     </div>
                     <div style="display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;">
                         <button onclick="reinitFiltresHistG()" style="padding:8px 14px;background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:.82rem;color:#64748b;">
-                            <i class="fa-solid fa-rotate-left"></i> Réinitialiser
+                            <i class="fa-solid fa-rotate-left"></i> <?= __('reset_filters') ?>
                         </button>
                         <button onclick="exporterHistoriquePDF()" style="padding:8px 14px;background:#dc2626;border:none;border-radius:8px;cursor:pointer;font-size:.82rem;color:#fff;font-family:inherit;font-weight:600;">
-                            <i class="fa-solid fa-file-pdf"></i> Exporter PDF
+                            <i class="fa-solid fa-file-pdf"></i> <?= __('export_pdf') ?>
                         </button>
                         <button onclick="imprimerHistorique()" style="padding:8px 14px;background:#0a2b5e;border:none;border-radius:8px;cursor:pointer;font-size:.82rem;color:#fff;font-family:inherit;font-weight:600;">
-                            <i class="fa-solid fa-print"></i> Imprimer
+                            <i class="fa-solid fa-print"></i> <?= __('print_btn') ?>
                         </button>
                     </div>
                 </div>
                 <div id="historiqueContent">
-                    <div class="empty-state"><i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem;color:#1a4db5;"></i><p>Chargement...</p></div>
+                    <div class="empty-state"><i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem;color:#1a4db5;"></i><p><?= __('loading') ?></p></div>
                 </div>
                 <div id="historiquePagination" style="display:flex;justify-content:center;align-items:center;gap:6px;margin-top:20px;flex-wrap:wrap;"></div>
             </div>
 
             <!-- Section Profil -->
             <div id="section-profil" class="section" style="display:none;">
-                <div class="section-header"><span class="section-title"><i class="fa-solid fa-user"></i> Mon profil</span></div>
+                <div class="section-header"><span class="section-title"><i class="fa-solid fa-user"></i> <?= __('my_profile') ?></span></div>
                 <!-- Lock screen profil -->
                 <div id="profilLockScreen" class="profil-lock">
                     <div class="profil-lock-icon"><i class="fa-solid fa-lock"></i></div>
-                    <div class="profil-lock-title">Vérification requise</div>
-                    <div class="profil-lock-sub">Entrez votre mot de passe pour accéder à votre profil.</div>
-                    <div class="profil-lock-error" id="profilLockError" style="display:none;">Mot de passe incorrect.</div>
-                    <input type="password" class="profil-lock-input" id="profilLockPassword" placeholder="Votre mot de passe" autocomplete="current-password">
-                    <button class="profil-lock-btn" onclick="verifierMdpProfil()"><i class="fa-solid fa-unlock"></i> Accéder au profil</button>
+                    <div class="profil-lock-title"><?= __('profile_locked') ?></div>
+                    <div class="profil-lock-sub"><?= __('profile_locked_sub') ?></div>
+                    <div class="profil-lock-error" id="profilLockError" style="display:none;"><?= __('wrong_password') ?></div>
+                    <input type="password" class="profil-lock-input" id="profilLockPassword" placeholder="<?= __('profile_lock_pw_input') ?>" autocomplete="current-password">
+                    <button class="profil-lock-btn" onclick="verifierMdpProfil()"><i class="fa-solid fa-unlock"></i> <?= __('access_profile') ?></button>
                 </div>
-                <div id="profilContent" style="display:none;"><div class="empty-state">Chargement...</div></div>
+                <div id="profilContent" style="display:none;"><div class="empty-state"><?= __('loading') ?></div></div>
             </div>
         </div>
     </main>
 </div>
 
 <!-- MODALS -->
-<div id="modalChoix" class="modal-choix"><div class="modal-choix-content"><div class="modal-choix-header"><h2>Choisir le mode</h2><button onclick="fermerModalChoix()" style="background:rgba(255,255,255,0.15);border:none;width:34px;height:34px;border-radius:50%;cursor:pointer;color:white;">✕</button></div><div class="modal-choix-body"><div class="choix-btn" onclick="choisirMode('manuel')"><div class="choix-btn-icon"><i class="fa-solid fa-pen-to-square" style="font-size:1.4rem;color:#1a4db5;"></i></div><div><div class="choix-btn-title">Saisie manuelle</div><div class="choix-btn-desc">Remplir le formulaire</div></div></div><div class="choix-btn" onclick="choisirMode('qr')"><div class="choix-btn-icon"><i class="fa-solid fa-qrcode" style="font-size:1.4rem;color:#1a4db5;"></i></div><div><div class="choix-btn-title">QR Code</div><div class="choix-btn-desc">Générer un QR code</div></div></div></div></div></div>
+<div id="modalChoix" class="modal-choix"><div class="modal-choix-content"><div class="modal-choix-header"><h2><?= __('choose_mode_title') ?></h2><button onclick="fermerModalChoix()" style="background:rgba(255,255,255,0.15);border:none;width:34px;height:34px;border-radius:50%;cursor:pointer;color:white;">✕</button></div><div class="modal-choix-body"><div class="choix-btn" onclick="choisirMode('manuel')"><div class="choix-btn-icon"><i class="fa-solid fa-pen-to-square" style="font-size:1.4rem;color:#1a4db5;"></i></div><div><div class="choix-btn-title"><?= __('manual_entry') ?></div><div class="choix-btn-desc"><?= __('fill_form') ?></div></div></div><div class="choix-btn" onclick="choisirMode('qr')"><div class="choix-btn-icon"><i class="fa-solid fa-qrcode" style="font-size:1.4rem;color:#1a4db5;"></i></div><div><div class="choix-btn-title">QR Code</div><div class="choix-btn-desc"><?= __('generate_qr_short') ?></div></div></div></div></div></div>
 
-<div id="modalConsultation" class="modal-consultation"><div class="modal-consultation-content"><div class="modal-consultation-header"><div><div style="font-weight:700;font-size:1.2rem;">Enregistrer une consultation</div><div style="font-size:0.8rem;opacity:0.7;"><?= htmlspecialchars($sousService['nom']) ?></div></div><button onclick="fermerModalConsultation()" style="background:rgba(255,255,255,0.15);border:none;width:34px;height:34px;border-radius:50%;cursor:pointer;color:white;">✕</button></div><div class="modal-consultation-body"><form id="formConsultManuelle" onsubmit="return false;"><input type="hidden" name="action" value="consultation_manuelle"><div class="form-group"><label>Téléphone *</label><input type="tel" id="m_telephone" name="patient_telephone" placeholder="+237699123456" oninput="rechercherPatient(this.value)"></div><div class="form-row"><div class="form-group"><label>Nom *</label><input type="text" id="m_nom" name="patient_nom" required></div><div class="form-group"><label>Prénom *</label><input type="text" id="m_prenom" name="patient_prenom" required></div></div><div class="form-group"><label>Email</label><input type="email" id="m_email" name="patient_email" placeholder="patient@email.cm"></div><div class="form-group"><label>Statut initial</label><select name="statut"><option value="en_attente">En attente</option><option value="confirme">Confirmé</option></select></div><div class="form-group"><label>Motif</label><textarea name="motif" rows="3"></textarea></div><div style="display:flex;gap:10px;margin-top:20px;"><button type="button" class="btn-cancel" onclick="fermerModalConsultation()">Annuler</button><button type="submit" class="btn-submit" onclick="soumettreConsultationManuelle()">Enregistrer</button></div></form></div></div></div>
+<div id="modalConsultation" class="modal-consultation"><div class="modal-consultation-content"><div class="modal-consultation-header"><div><div style="font-weight:700;font-size:1.2rem;"><?= __('register_consultation') ?></div><div style="font-size:0.8rem;opacity:0.7;"><?= htmlspecialchars($sousService['nom']) ?></div></div><button onclick="fermerModalConsultation()" style="background:rgba(255,255,255,0.15);border:none;width:34px;height:34px;border-radius:50%;cursor:pointer;color:white;">✕</button></div><div class="modal-consultation-body"><form id="formConsultManuelle" onsubmit="return false;"><input type="hidden" name="action" value="consultation_manuelle"><div class="form-group"><label><?= __('phone_required') ?></label><input type="tel" id="m_telephone" name="patient_telephone" placeholder="+237699123456" oninput="rechercherPatient(this.value)"></div><div class="form-row"><div class="form-group"><label><?= __('last_name_required') ?></label><input type="text" id="m_nom" name="patient_nom" required></div><div class="form-group"><label><?= __('first_name_required') ?></label><input type="text" id="m_prenom" name="patient_prenom" required></div></div><div class="form-group"><label><?= __('email_label') ?></label><input type="email" id="m_email" name="patient_email" placeholder="patient@email.cm"></div><div class="form-group"><label><?= __('initial_status') ?></label><select name="statut"><option value="en_attente"><?= __('status_waiting') ?></option><option value="confirme"><?= __('status_confirmed') ?></option></select></div><div class="form-group"><label><?= __('motif_label') ?></label><textarea name="motif" rows="3"></textarea></div><div style="display:flex;gap:10px;margin-top:20px;"><button type="button" class="btn-cancel" onclick="fermerModalConsultation()"><?= __('cancel') ?></button><button type="submit" class="btn-submit" onclick="soumettreConsultationManuelle()"><?= __('register_btn') ?></button></div></form></div></div></div>
 
-<div id="modalQR" class="modal-qr"><div class="modal-qr-content"><div class="modal-qr-header"><h2>QR Code</h2><button onclick="fermerModalQR()" style="background:rgba(255,255,255,0.15);border:none;width:34px;height:34px;border-radius:50%;cursor:pointer;color:white;">✕</button></div><div class="modal-qr-body"><div id="qrLoadingState" class="qr-loading"></div><div id="qrContentState" class="hidden"><div class="qr-image-container"><img id="qrCodeImage" src="" alt="QR Code"></div><div class="qr-timer" id="qrTimer">20:00</div><div id="qrMessage" class="hidden"></div><div class="qr-actions"><button class="btn-sm btn-sm-green" onclick="telechargerQRCode()"><i class="fa-solid fa-download"></i> Télécharger</button><button class="btn-sm btn-sm-blue" onclick="imprimerQRCode()"><i class="fa-solid fa-print"></i> Imprimer</button><button class="btn-primary" onclick="regenererQRCode()">Régénérer</button></div></div></div></div></div>
+<div id="modalQR" class="modal-qr"><div class="modal-qr-content"><div class="modal-qr-header"><h2>QR Code</h2><button onclick="fermerModalQR()" style="background:rgba(255,255,255,0.15);border:none;width:34px;height:34px;border-radius:50%;cursor:pointer;color:white;">✕</button></div><div class="modal-qr-body"><div id="qrLoadingState" class="qr-loading"></div><div id="qrContentState" class="hidden"><div class="qr-image-container"><img id="qrCodeImage" src="" alt="QR Code"></div><div class="qr-timer" id="qrTimer">20:00</div><div id="qrMessage" class="hidden"></div><div class="qr-actions"><button class="btn-sm btn-sm-green" onclick="telechargerQRCode()"><i class="fa-solid fa-download"></i> <?= __('download') ?></button><button class="btn-sm btn-sm-blue" onclick="imprimerQRCode()"><i class="fa-solid fa-print"></i> <?= __('print_btn') ?></button><button class="btn-primary" onclick="regenererQRCode()"><?= __('regenerate') ?></button></div></div></div></div></div>
 
 <script>
+    // ── Internationalisation : dictionnaire de la langue courante + helper t() ──
+    const I18N = <?= \LangHelper::toJson() ?>;
+    function t(key) { return I18N[key] || key; }
+    const LOCALE = '<?= \LangHelper::getLang() === "en" ? "en-US" : "fr-FR" ?>';
+
     let semaineOffset = 0, currentQRPath = '', currentExpireAt = null, qrTimerInterval = null, autoRegenerateInterval = null, searchTimer, currentSection = 'file', isRefreshing = false;
     let _fileStatutFilter = null; // null = tous
     let _consultStatutFilter = null; // null = tous
@@ -754,14 +789,14 @@ unset($_SESSION['type_message']);
             const nomsG = nonSignalesG.map(f => `${escapeHtml(f.patient_prenom)} ${escapeHtml(f.patient_nom)}`).join(', ');
             bandeauG = `<div style="background:#fffbeb;border:1.5px solid #f59e0b;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;">
                 <i class="fa-solid fa-clock" style="color:#b45309;font-size:1rem;"></i>
-                <span style="font-size:.84rem;font-weight:700;color:#92400e;">Parti(s) en examen : <em style="font-style:normal;">${nomsG}</em> — Cliquez <strong>🔔 Patient revenu</strong> dès qu'il/elle se présente à nouveau</span>
+                <span style="font-size:.84rem;font-weight:700;color:#92400e;">${t('left_for_exam')} <em style="font-style:normal;">${nomsG}</em> — ${t('click_returned_alert')}</span>
             </div>`;
         }
         if(dejaSignalesG.length > 0) {
             const nomsSig = dejaSignalesG.map(f => `${escapeHtml(f.patient_prenom)} ${escapeHtml(f.patient_nom)}`).join(', ');
             bandeauG += `<div style="background:#eff6ff;border:1.5px solid #0052a0;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;">
                 <i class="fa-solid fa-bell" style="color:#0052a0;font-size:1rem;"></i>
-                <span style="font-size:.84rem;font-weight:700;color:#1e3a5f;">Médecin déjà averti pour : <em style="font-style:normal;">${nomsSig}</em> — en attente qu'il reprenne la consultation</span>
+                <span style="font-size:.84rem;font-weight:700;color:#1e3a5f;">${t('doctor_already_alerted_for')} <em style="font-style:normal;">${nomsSig}</em> ${t('waiting_resume')}</span>
             </div>`;
         }
 
@@ -792,7 +827,7 @@ unset($_SESSION['type_message']);
             <span style="font-weight:700;font-size:.92rem;color:${couleur};">${titre}</span>
             <span class="badge" style="background:${couleur};color:#fff;">${totalCount}</span>
         </div>`;
-        h += '<div style="overflow-x:auto;"><table class="file-table"><thead><tr><th>Rang</th><th>Patient</th><th>Téléphone</th><th>Heure</th><th>Mode</th><th>Statut</th><th>Actions</th></tr></thead><tbody>';
+        h += `<div style="overflow-x:auto;"><table class="file-table"><thead><tr><th>${t('rank')}</th><th>${t('patient')}</th><th>${t('phone')}</th><th>${t('expected_time')}</th><th>${t('mode_label')}</th><th>${t('status')}</th><th>${t('actions')}</th></tr></thead><tbody>`;
         for(const f of rows) h += renderLigneFileG(f);
         h += '</tbody></table></div>';
         return h;
@@ -815,7 +850,7 @@ unset($_SESSION['type_message']);
             pauseInfo = `<br><small style="color:#b45309;font-size:.72rem;"><i class="fa-solid fa-clock"></i> Parti depuis ${mins}min ${secsRest}s — retour attendu${f.motif_pause?' ('+escapeHtml(f.motif_pause)+')':''}</small>`;
         }
         if(isPauseRetourG) {
-            pauseInfo += `<br><span style="display:inline-flex;align-items:center;gap:4px;background:#0052a0;color:white;font-size:.68rem;font-weight:700;border-radius:20px;padding:2px 8px;margin-top:3px;"><i class="fa-solid fa-bell"></i> Médecin averti</span>`;
+            pauseInfo += `<br><span style="display:inline-flex;align-items:center;gap:4px;background:#0052a0;color:white;font-size:.68rem;font-weight:700;border-radius:20px;padding:2px 8px;margin-top:3px;"><i class="fa-solid fa-bell"></i> ${t('doctor_alerted')}</span>`;
         }
         const medecinInfo = f.medecin_nom ? `<br><small style="color:#94a3b8;font-size:.72rem;"><i class="fa-solid fa-user-doctor"></i> ${escapeHtml(f.medecin_nom)}</small>` : '';
 
@@ -827,11 +862,12 @@ unset($_SESSION['type_message']);
         let actions = '';
         if(f.statut==='en_pause') {
             if(isPauseRetourG) {
-                actions += `<button class="btn-sm btn-sm-resume" disabled style="opacity:.6;cursor:default;"><i class="fa-solid fa-bell"></i> Médecin averti</button>`;
+                actions += `<button class="btn-sm btn-sm-resume" disabled style="opacity:.6;cursor:default;"><i class="fa-solid fa-bell"></i> ${t('doctor_alerted')}</button>`;
             } else {
                 actions += `<button class="btn-sm btn-sm-resume" onclick="signalerRetourPatientG(${f.id})"><i class="fa-solid fa-bell"></i> 🔔 Patient revenu</button>`;
             }
-            actions += `<button class="btn-sm btn-sm-orange" onclick="soumettreActionG(${f.id},'absent')"><i class="fa-solid fa-user-slash"></i> Absent</button>`;
+        } else if(f.statut==='en_cours') {
+            actions = '';
         } else {
             actions = `<div style="display:flex;gap:5px;flex-wrap:wrap;"><button class="btn-sm btn-sm-orange" onclick="soumettreActionG(${f.id},'absent')"><i class="fa-solid fa-user-slash"></i> Absent</button><button class="btn-sm btn-sm-red" onclick="soumettreActionG(${f.id},'annule')"><i class="fa-solid fa-xmark"></i> Annuler</button></div>`;
         }
@@ -941,7 +977,7 @@ unset($_SESSION['type_message']);
         if(_consultPageG > totalPages) _consultPageG = totalPages;
         const debut = (_consultPageG - 1) * _PER_PAGE_G;
         const page = consultations.slice(debut, debut + _PER_PAGE_G);
-        let h='<div style="overflow-x:auto;"><table class="file-table"><thead><tr><th>#</th><th>Patient</th><th>Médecin</th><th>Heure</th><th>Statut</th></tr></thead><tbody>';
+        let h=`<div style="overflow-x:auto;"><table class="file-table"><thead><tr><th>#</th><th>${t('patient')}</th><th>${t('doctor')}</th><th>${t('expected_time')}</th><th>${t('status')}</th><th>${t('actions')}</th></tr></thead><tbody>`;
         for(const ct of page){
             let bc='badge-grey',lb=ct.statut;
             if(ct.statut==='traite'){ bc='badge-green'; lb='Traitée'; }
@@ -950,12 +986,25 @@ unset($_SESSION['type_message']);
             else if(ct.statut==='absent'){ bc='badge-red'; lb='Absent'; }
             else if(ct.statut==='en_attente'){ lb='En attente'; }
             else if(ct.statut==='confirme'){ lb='Confirmé'; }
+            let actionsC = '';
+            if(ct.statut==='en_pause') {
+                if(ct.priorite_retour) {
+                    actionsC += `<button class="btn-sm btn-sm-resume" disabled style="opacity:.6;cursor:default;"><i class="fa-solid fa-bell"></i> ${t('doctor_alerted')}</button>`;
+                } else {
+                    actionsC += `<button class="btn-sm btn-sm-resume" onclick="signalerRetourPatientG(${ct.id})"><i class="fa-solid fa-bell"></i> 🔔 Patient revenu</button>`;
+                }
+            } else if(ct.statut==='en_cours') {
+                actionsC = '';
+            } else if(!['traite','annule','absent'].includes(ct.statut)) {
+                actionsC = `<button class="btn-sm btn-sm-orange" onclick="soumettreActionG(${ct.id},'absent')"><i class="fa-solid fa-user-slash"></i> Absent</button><button class="btn-sm btn-sm-red" onclick="soumettreActionG(${ct.id},'annule')"><i class="fa-solid fa-xmark"></i> Annuler</button>`;
+            }
             h+=`<tr>
                 <td>${ct.rang}</td>
                 <td><strong>${escapeHtml(ct.patient_nom)} ${escapeHtml(ct.patient_prenom)}</strong></td>
                 <td>${ct.medecin_nom?escapeHtml(ct.medecin_nom):'—'}</td>
                 <td>${ct.heure_passage_estimee||'—'}</td>
                 <td><span class="badge ${bc}">${lb}</span></td>
+                <td><div style="display:flex;gap:5px;flex-wrap:wrap;">${actionsC}</div></td>
             </tr>`;
         }
         h+='</tbody></table></div>';
@@ -1036,7 +1085,7 @@ unset($_SESSION['type_message']);
 
     function formatJourCourtG(dateStr) {
         const d = new Date(dateStr + 'T00:00:00');
-        return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+        return d.toLocaleDateString(LOCALE, { day: '2-digit', month: '2-digit' });
     }
 
     function dessinerChartsEvolutionG(evolution) {
@@ -1197,17 +1246,17 @@ unset($_SESSION['type_message']);
                     let icon, couleur, msg;
                     if (diff < -2) {
                         icon = '📉'; couleur = '#16a34a';
-                        msg = `Le temps d'attente a <strong>baissé de ${absV} min</strong> en moyenne ces 7 derniers jours par rapport aux 30 derniers jours. Bonne performance !`;
+                        msg = t('wait_time_decreased').replace('%s', absV);
                     } else if (diff > 2) {
                         icon = '📈'; couleur = '#dc2626';
-                        msg = `Le temps d'attente a <strong>augmenté de ${absV} min</strong> ces 7 derniers jours. Vigilance recommandée.`;
+                        msg = t('wait_time_increased').replace('%s', absV);
                     } else {
                         icon = '➡️'; couleur = '#1a4db5';
-                        msg = `Le temps d'attente est <strong>stable</strong> (variation < 2 min entre les 7 et 30 derniers jours).`;
+                        msg = t('wait_time_stable');
                     }
                     if (g.premier_jour) {
-                        const premierJour = new Date(g.premier_jour + 'T00:00:00').toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
-                        msg += ` <span style="color:#94a3b8;font-size:.78rem;">Mesures depuis le ${premierJour}.</span>`;
+                        const premierJour = new Date(g.premier_jour + 'T00:00:00').toLocaleDateString(LOCALE, { day:'2-digit', month:'long', year:'numeric' });
+                        msg += ` <span style="color:#94a3b8;font-size:.78rem;">${t('measures_since')} ${premierJour}.</span>`;
                     }
                     tend.innerHTML = `<span style="font-size:1.2rem;">${icon}</span> <span style="color:${couleur};">${msg}</span>`;
                     tend.style.display = 'flex';
@@ -1299,20 +1348,20 @@ unset($_SESSION['type_message']);
     
     function soumettreFormulaireStatut(form) {
         fetch('gestionnaire.php?action=traiter_action_ajax',{method:'POST',body:new FormData(form),headers:{'X-Requested-With':'XMLHttpRequest'}})
-            .then(r=>r.json()).then(d=>{if(d.success){afficherMessage(d.message,'success');rafraichirDonnees();}else afficherMessage(d.message||'Erreur','error');})
-            .catch(()=>afficherMessage('Erreur','error'));
+            .then(r=>r.json()).then(d=>{if(d.success){afficherMessage(d.message,'success');rafraichirDonnees();}else afficherMessage(d.message||t('generic_error'),'error');})
+            .catch(()=>afficherMessage(t('generic_error'),'error'));
     }
 
     function signalerRetourPatientG(id) {
-        if(!confirm('Le patient est revenu de son examen ? Le médecin va être averti pour qu\'il reprenne la consultation.')) return;
+        if(!confirm(t('patient_back_confirm'))) return;
         const fd = new FormData();
         fd.append('action', 'signaler_retour_patient');
         fd.append('consultation_id', id);
         fetch('gestionnaire.php?action=traiter_action_ajax', { method:'POST', body:fd, headers:{'X-Requested-With':'XMLHttpRequest'} })
             .then(r=>r.json()).then(d=>{
                 if(d.success){ afficherMessage(d.message,'success'); rafraichirDonnees(); }
-                else afficherMessage(d.message||'Erreur','error');
-            }).catch(()=>afficherMessage('Erreur réseau','error'));
+                else afficherMessage(d.message||t('generic_error'),'error');
+            }).catch(()=>afficherMessage(t('network_error_short'),'error'));
     }
 
     function soumettreActionG(id, statut) {
@@ -1323,8 +1372,8 @@ unset($_SESSION['type_message']);
         fetch('gestionnaire.php?action=traiter_action_ajax', { method:'POST', body:fd, headers:{'X-Requested-With':'XMLHttpRequest'} })
             .then(r=>r.json()).then(d=>{
                 if(d.success){ afficherMessage(d.message,'success'); rafraichirDonnees(); }
-                else afficherMessage(d.message||'Erreur','error');
-            }).catch(()=>afficherMessage('Erreur réseau','error'));
+                else afficherMessage(d.message||t('generic_error'),'error');
+            }).catch(()=>afficherMessage(t('network_error_short'),'error'));
     }
     
     function soumettreConsultationManuelle() {
@@ -1406,7 +1455,7 @@ unset($_SESSION['type_message']);
                 afficherTableauHistoriqueG(d.data);
                 afficherPaginationHistG(d.page, d.last_page);
             })
-            .catch(() => { if(content && !silent) content.innerHTML = '<div class="empty-state">Erreur réseau</div>'; });
+            .catch(() => { if(content && !silent) content.innerHTML = `<div class="empty-state">${t('network_error_short')}</div>`; });
     }
 
     function renderHistPillsG(counts, total) {
@@ -1433,13 +1482,13 @@ unset($_SESSION['type_message']);
         const c = document.getElementById('historiqueContent');
         if(!c) return;
         if(!rows || rows.length === 0) {
-            c.innerHTML = '<div class="empty-state"><i class="fa-solid fa-inbox" style="font-size:2rem;margin-bottom:10px;"></i><br>Aucune consultation trouvée.</div>';
+            c.innerHTML = `<div class="empty-state"><i class="fa-solid fa-inbox" style="font-size:2rem;margin-bottom:10px;"></i><br>${t('no_consultation_found_full')}</div>`;
             return;
         }
         const bcMap = { traite:'badge-green', absent:'badge-red', annule:'badge-red', en_cours:'badge-blue', en_pause:'badge-grey', en_attente:'badge-grey', confirme:'badge-grey' };
         const lbMap = { traite:'Traité', absent:'Absent', annule:'Annulé', en_cours:'En cours', en_pause:'En pause', en_attente:'En attente', confirme:'Confirmé' };
         const modeMap = { LIGNE:'<span class="badge badge-blue" style="font-size:.65rem;">En ligne</span>', PLACE:'<span class="badge badge-grey" style="font-size:.65rem;">Sur place</span>', MANUEL:'<span class="badge badge-grey" style="font-size:.65rem;">Manuel</span>', QR_CODE:'<span class="badge badge-grey" style="font-size:.65rem;">QR Code</span>' };
-        let h = '<div style="overflow-x:auto;"><table class="file-table"><thead><tr><th>Date</th><th>Patient</th><th>Médecin</th><th>Téléphone</th><th>Heure prévue</th><th>Début</th><th>Fin</th><th>Durée</th><th>Statut</th><th>Mode</th></tr></thead><tbody>';
+        let h = `<div style="overflow-x:auto;"><table class="file-table"><thead><tr><th>${t('date_label')}</th><th>${t('patient')}</th><th>${t('doctor')}</th><th>${t('phone')}</th><th>${t('expected_time')}</th><th>${t('start_short')}</th><th>${t('end_short')}</th><th>${t('duration_label')}</th><th>${t('status')}</th><th>${t('mode_label')}</th></tr></thead><tbody>`;
         for(const v of rows) {
             h += `<tr>
                 <td style="white-space:nowrap;">${escapeHtml(v.date_consultation)}</td>
@@ -1541,12 +1590,12 @@ unset($_SESSION['type_message']);
         ${filtre ? `<div class="filtre">Filtres : ${filtre}</div>` : ''}
         <table>
             <thead><tr>
-                <th>Date</th><th>Patient</th><th>Médecin</th><th>Téléphone</th>
-                <th>H. prévue</th><th>Début</th><th>Fin</th><th>Durée</th><th>Statut</th><th>Mode</th>
+                <th>${t('date_label')}</th><th>${t('patient')}</th><th>${t('doctor')}</th><th>${t('phone')}</th>
+                <th>${t('expected_time')}</th><th>${t('start_short')}</th><th>${t('end_short')}</th><th>${t('duration_label')}</th><th>${t('status')}</th><th>${t('mode_label')}</th>
             </tr></thead>
             <tbody>${rows_html}</tbody>
         </table>
-        <div class="total">Total : ${rows.length} consultation(s) — Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</div>
+        <div class="total">${t('report_total_footer').replace('%n', rows.length).replace('%d', new Date().toLocaleDateString(LOCALE)).replace('%t', new Date().toLocaleTimeString(LOCALE))}</div>
         </body></html>`;
     }
 
@@ -1612,8 +1661,8 @@ unset($_SESSION['type_message']);
     
     function ouvrirModalQR(){ const m=document.getElementById('modalQR'); if(m) m.classList.add('active'); chargerQRCode(); }
     function fermerModalQR(){ const m=document.getElementById('modalQR'); if(m) m.classList.remove('active'); if(qrTimerInterval) clearInterval(qrTimerInterval); }
-    function chargerQRCode(){ showQRLoading(true); fetch('gestionnaire.php?action=get_qrcode_actif').then(r=>r.json()).then(d=>{if(d.redirect){showQRMessage(d.message||'Session expirée.','error');return;} if(d.success && d.qr_code_path) afficherQRCode(d.qr_code_path, d.expire_at); else genererNouveauQRCode();}).catch(()=>{showQRMessage('Erreur réseau.','error');}); }
-    function genererNouveauQRCode(){ showQRLoading(true); const fd=new FormData(); fd.append('sous_service_id','<?= $sousService['id'] ?? 0 ?>'); fetch('gestionnaire.php?action=generer_qrcode',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{if(d.redirect){showQRMessage(d.message||'Session expirée.','error');return;} if(d.success) afficherQRCode(d.qr_code_path,d.expire_at); else {showQRMessage(d.error||d.message||'Erreur lors de la génération.','error'); showQRLoading(false);}}).catch(()=>{showQRMessage('Erreur réseau. Veuillez réessayer.','error');showQRLoading(false);}); }
+    function chargerQRCode(){ showQRLoading(true); fetch('gestionnaire.php?action=get_qrcode_actif').then(r=>r.json()).then(d=>{if(d.redirect){showQRMessage(d.message||t('session_expired'),'error');return;} if(d.success && d.qr_code_path) afficherQRCode(d.qr_code_path, d.expire_at); else genererNouveauQRCode();}).catch(()=>{showQRMessage(t('network_error'),'error');}); }
+    function genererNouveauQRCode(){ showQRLoading(true); const fd=new FormData(); fd.append('sous_service_id','<?= $sousService['id'] ?? 0 ?>'); fetch('gestionnaire.php?action=generer_qrcode',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{if(d.redirect){showQRMessage(d.message||t('session_expired'),'error');return;} if(d.success) afficherQRCode(d.qr_code_path,d.expire_at); else {showQRMessage(d.error||d.message||t('generation_error'),'error'); showQRLoading(false);}}).catch(()=>{showQRMessage(t('network_error'),'error');showQRLoading(false);}); }
     function regenererQRCode(){ if(confirm('Générer un nouveau QR code ?')) genererNouveauQRCode(); }
     function afficherQRCode(path,expireAt){
         // Normaliser le chemin : s'assurer qu'il pointe vers public/qrcodes/
@@ -1643,8 +1692,8 @@ unset($_SESSION['type_message']);
     // Emploi du temps
     function getLundiSemaine(offset=0){ const t=new Date(), dow=t.getDay(), diff=dow===0?-6:-(dow-1), l=new Date(t); l.setDate(t.getDate()+diff+(offset*7)); return l; }
     function formatDateISO(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
-    function formatDateFr(d){ return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}); }
-    function getNomJour(d){ return d.toLocaleDateString('fr-FR',{weekday:'long'}); }
+    function formatDateFr(d){ return d.toLocaleDateString(LOCALE,{day:'2-digit',month:'2-digit',year:'numeric'}); }
+    function getNomJour(d){ return d.toLocaleDateString(LOCALE,{weekday:'long'}); }
     function changerSemaine(delta){ if(delta===0) semaineOffset=0; else semaineOffset+=delta; chargerEmploiTemps(); }
     function chargerEmploiTemps(silent){
         const l=getLundiSemaine(semaineOffset), dd=formatDateISO(l), dim=new Date(l);
@@ -1677,14 +1726,14 @@ unset($_SESSION['type_message']);
         const joursTravail = data.jours_travail || {};
 
         if(!data.medecins||data.medecins.length===0){
-            if(pt){pt.innerHTML='<div class="empty-state"><i class="fa-solid fa-user-slash" style="font-size:2rem;color:#cbd5e1;"></i><p>Aucun médecin disponible</p></div>';pt.style.display='block';}
+            if(pt){pt.innerHTML=`<div class="empty-state"><i class="fa-solid fa-user-slash" style="font-size:2rem;color:#cbd5e1;"></i><p>${t('no_doctor_available')}</p></div>`;pt.style.display='block';}
             if(banner) banner.style.display='none';
             return;
         }
 
         const medecinsAffiches = filtreMedecinId ? data.medecins.filter(m=>m.id==filtreMedecinId) : data.medecins;
         if(medecinsAffiches.length===0){
-            if(pt){pt.innerHTML='<div class="empty-state">Médecin introuvable</div>';pt.style.display='block';}
+            if(pt){pt.innerHTML=`<div class="empty-state">${t('doctor_not_found')}</div>`;pt.style.display='block';}
             if(banner) banner.style.display='none';
             return;
         }
@@ -1847,7 +1896,7 @@ unset($_SESSION['type_message']);
         if(e.key==='Enter' && document.getElementById('profilLockPassword') === document.activeElement) verifierMdpProfil();
     });
     function chargerProfilData(){ const c=document.getElementById('profilContent'); if(!c) return; c.innerHTML='<div class="empty-state">Chargement...</div>'; fetch('gestionnaire.php?action=get_profil_data').then(r=>r.json()).then(d=>{if(d.success)afficherFormulaireProfil(d.profil, _profilPassword);else c.innerHTML=`<div class="profil-error">${d.message||'Erreur'}</div>`;}).catch(()=>c.innerHTML='<div class="profil-error">Erreur</div>'); }
-    function afficherFormulaireProfil(profil, mdpDeverrouillage){ const h=`<div class="profil-section"><form id="profilForm"><div class="form-group"><label><i class="fa-solid fa-user"></i> Nom complet</label><input type="text" name="nom" id="profil_nom" value="${escapeHtml(profil.nom)}" required></div><div class="form-group"><label><i class="fa-solid fa-phone"></i> Téléphone</label><input type="tel" name="telephone" id="profil_telephone" value="${escapeHtml(profil.telephone)}" required></div><div class="form-group"><label><i class="fa-solid fa-envelope"></i> Email</label><input type="email" name="email" id="profil_email" value="${escapeHtml(profil.email)}" required></div><div class="separator"></div><h3>Changer le mot de passe</h3><div class="form-group"><label><i class="fa-solid fa-lock"></i> Mot de passe actuel</label><input type="password" name="password_actuel" id="profil_password_actuel" placeholder="Mot de passe actuel"></div><div class="form-group"><label><i class="fa-solid fa-key"></i> Nouveau mot de passe</label><input type="password" name="nouveau_password" id="profil_nouveau_password" placeholder="Min 8 car., 1 maj., 1 chiffre"></div><div class="form-group"><label><i class="fa-solid fa-check"></i> Confirmer</label><input type="password" name="confirmer_password" id="profil_confirmer_password" placeholder="Répéter"></div><button type="submit" class="btn-save"><i class="fa-solid fa-floppy-disk"></i> Enregistrer</button></form><div id="profilMessage"></div></div>`; document.getElementById('profilContent').innerHTML=h; if(mdpDeverrouillage) document.getElementById('profil_password_actuel').value = mdpDeverrouillage; const pf=document.getElementById('profilForm'); if(pf) pf.addEventListener('submit',function(e){e.preventDefault();enregistrerProfil();}); }
+    function afficherFormulaireProfil(profil, mdpDeverrouillage){ const h=`<div class="profil-section"><form id="profilForm"><div class="form-group"><label><i class="fa-solid fa-user"></i> ${t('full_name')}</label><input type="text" name="nom" id="profil_nom" value="${escapeHtml(profil.nom)}" required></div><div class="form-group"><label><i class="fa-solid fa-phone"></i> ${t('phone')}</label><input type="tel" name="telephone" id="profil_telephone" value="${escapeHtml(profil.telephone)}" required></div><div class="form-group"><label><i class="fa-solid fa-envelope"></i> ${t('email_label')}</label><input type="email" name="email" id="profil_email" value="${escapeHtml(profil.email)}" required></div><div class="separator"></div><h3>${t('change_pw_title')}</h3><div class="form-group"><label><i class="fa-solid fa-lock"></i> ${t('current_pw')}</label><input type="password" name="password_actuel" id="profil_password_actuel" placeholder="${t('current_pw')}"></div><div class="form-group"><label><i class="fa-solid fa-key"></i> ${t('new_pw')}</label><input type="password" name="nouveau_password" id="profil_nouveau_password" placeholder="${t('password_hint')}"></div><div class="form-group"><label><i class="fa-solid fa-check"></i> ${t('confirm')}</label><input type="password" name="confirmer_password" id="profil_confirmer_password" placeholder="${t('repeat')}"></div><button type="submit" class="btn-save"><i class="fa-solid fa-floppy-disk"></i> ${t('save_btn')}</button></form><div id="profilMessage"></div></div>`; document.getElementById('profilContent').innerHTML=h; if(mdpDeverrouillage) document.getElementById('profil_password_actuel').value = mdpDeverrouillage; const pf=document.getElementById('profilForm'); if(pf) pf.addEventListener('submit',function(e){e.preventDefault();enregistrerProfil();}); }
     function enregistrerProfil(){ const fd=new FormData(); fd.append('nom',document.getElementById('profil_nom').value); fd.append('telephone',document.getElementById('profil_telephone').value); fd.append('email',document.getElementById('profil_email').value); fd.append('password_actuel',document.getElementById('profil_password_actuel').value||_profilPassword); fd.append('nouveau_password',document.getElementById('profil_nouveau_password').value); fd.append('confirmer_password',document.getElementById('profil_confirmer_password').value); const btn=document.querySelector('#profilForm button[type="submit"]'), ot=btn?btn.innerHTML:''; if(btn){btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Enregistrement...';btn.disabled=true;} fetch('gestionnaire.php?action=mettre_a_jour_profil',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{if(btn){btn.innerHTML=ot;btn.disabled=false;} const md=document.getElementById('profilMessage'); if(d.success){if(md)md.innerHTML=`<div class="profil-success">${d.message}</div>`;setTimeout(()=>window.location.reload(),1500);}else{let err='';if(d.errors)for(const[k,v]of Object.entries(d.errors))err+=`<div class="error-msg">- ${v}</div>`;else err=d.message||'Erreur';if(md)md.innerHTML=`<div class="profil-error">${err}</div>`;}}).catch(()=>{if(btn){btn.innerHTML=ot;btn.disabled=false;}const md=document.getElementById('profilMessage');if(md)md.innerHTML='<div class="profil-error">Erreur</div>';}); }
 
     // Search / filter functions

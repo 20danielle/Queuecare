@@ -571,7 +571,8 @@ class AdminController {
         AuthHelper::exigerRole('admin');
         header('Content-Type: application/json');
 
-        $jours = max(7, min(365, (int)($_GET['jours'] ?? 30)));
+        // jours=0 = "Aujourd'hui"
+        $jours = max(0, min(365, (int)($_GET['jours'] ?? 30)));
         $db = \Database::getInstance()->getConnection();
 
         // ── Évolution globale hôpital ──

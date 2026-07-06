@@ -234,6 +234,12 @@ class MedecinController
         $isAdminMedecin = AuthHelper::estAdminMedecin();
 
         $medecinId  = (int)$_SESSION['medecin_id'];
+
+        // Marque le médecin comme "connecté aujourd'hui" : condition
+        // nécessaire pour que choisirMedecinMoinsOccupe() lui envoie des
+        // patients (cf. gestion des retards/indisponibilités imprévues).
+        $this->model->marquerConnexionDashboard($medecinId);
+
         $medecin    = $this->model->trouverParId($medecinId);
         $affectation = $this->model->getSousServiceMedecin($medecinId);
         
@@ -288,6 +294,11 @@ class MedecinController
         }
 
         $medecinId   = $_SESSION['medecin_id'];
+
+        // Heartbeat : le dashboard est ouvert et interroge le serveur, donc
+        // le médecin est bien présent/actif aujourd'hui.
+        $this->model->marquerConnexionDashboard((int)$medecinId);
+
         $affectation = $this->model->getSousServiceMedecin($medecinId);
 
         if (!$affectation) {
@@ -890,7 +901,8 @@ class MedecinController
             echo json_encode(['success' => false, 'redirect' => 'medecin.php?action=connexion']);
             exit;
         }
-        $jours = max(7, min(365, (int)($_GET['jours'] ?? 7)));
+        // jours=0 = "Aujourd'hui" (les fonctions du modèle traitent 0 comme la journée en cours)
+        $jours = max(0, min(365, (int)($_GET['jours'] ?? 7)));
         $evolution = $this->model->statsEvolution((int)$medecinId, $jours);
         $totaux    = $this->model->statsTotalesMedecin((int)$medecinId, $jours);
         echo json_encode([

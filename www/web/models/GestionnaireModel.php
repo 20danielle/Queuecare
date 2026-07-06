@@ -412,6 +412,7 @@ class GestionnaireModel
         $stmt = $this->db->prepare(
             'SELECT c.id, c.rang, c.statut, c.mode_prise, c.heure_passage_estimee,
                     c.heure_debut_reelle, c.heure_fin_reelle, c.motif,
+                    c.priorite_retour, c.heure_pause, c.motif_pause,
                     p.nom AS patient_nom, p.prenom AS patient_prenom, p.telephone,
                     CONCAT(m.prenom, " ", m.nom) AS medecin_nom
              FROM consultations c
@@ -428,10 +429,83 @@ class GestionnaireModel
        ACTIONS GESTIONNAIRE
     ════════════════════════════════════════════════════════ */
 
+    /**
+     * Met à jour le statut d'une consultation.
+     *
+     * Quand le gestionnaire annule une consultation ou déclare un patient
+     * absent, celle-ci sort de la file active : tous les patients qui la
+     * suivaient (même sous-service, même jour, rang supérieur, toujours
+     * "actifs") avancent automatiquement d'un rang pour combler le trou —
+     * le patient suivant devient donc le #1 s'il ne restait que lui devant.
+     *
+     * ⚠️ Le gestionnaire ne peut PAS déclarer "absent" ni "annulé" un patient
+     * dont la consultation est déjà "en_cours" (le médecin le reçoit) ou
+     * "en_pause" (le patient est parti faire un examen à la demande du
+     * médecin) : ces deux statuts relèvent d'une décision médicale et
+     * seul le médecin peut les faire évoluer. On lève une exception dédiée
+     * pour que le contrôleur puisse renvoyer un message clair au lieu
+     * d'un simple échec silencieux.
+     *
+     * @throws \RuntimeException si le changement de statut est interdit
+     *                           dans l'état actuel de la consultation.
+     */
     public function majStatutConsultation(int $consultationId, string $statut): bool
     {
-        $stmt = $this->db->prepare('UPDATE consultations SET statut = :s WHERE id = :id');
-        return $stmt->execute([':s' => $statut, ':id' => $consultationId]);
+        $this->db->beginTransaction();
+        try {
+            $stmt = $this->db->prepare(
+                'SELECT sous_service_id, rang, statut AS statut_actuel, DATE(heure_emission) AS jour
+                 FROM consultations WHERE id = :id FOR UPDATE'
+            );
+            $stmt->execute([':id' => $consultationId]);
+            $consult = $stmt->fetch();
+
+            if (!$consult) {
+                $this->db->rollBack();
+                return false;
+            }
+
+            if (
+                in_array($statut, ['annule', 'absent'], true)
+                && in_array($consult['statut_actuel'], ['en_cours', 'en_pause'], true)
+            ) {
+                $this->db->rollBack();
+                throw new \RuntimeException(
+                    $consult['statut_actuel'] === 'en_cours'
+                        ? "Impossible : la consultation est en cours, seul le médecin peut la modifier."
+                        : "Impossible : le patient est en pause examen, seul le médecin peut modifier son statut."
+                );
+            }
+
+            $stmtMaj = $this->db->prepare('UPDATE consultations SET statut = :s WHERE id = :id');
+            $ok = $stmtMaj->execute([':s' => $statut, ':id' => $consultationId]);
+
+            if ($ok && in_array($statut, ['annule', 'absent'], true)) {
+                $stmtDecal = $this->db->prepare(
+                    'UPDATE consultations
+                     SET rang = rang - 1
+                     WHERE sous_service_id = :ss
+                       AND DATE(heure_emission) = :jour
+                       AND rang > :rang
+                       AND statut IN ("en_attente", "confirme", "en_cours", "en_pause")'
+                );
+                $stmtDecal->execute([
+                    ':ss'   => $consult['sous_service_id'],
+                    ':jour' => $consult['jour'],
+                    ':rang' => $consult['rang'],
+                ]);
+            }
+
+            $this->db->commit();
+            return $ok;
+        } catch (\RuntimeException $e) {
+            if ($this->db->inTransaction()) $this->db->rollBack();
+            throw $e;
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) $this->db->rollBack();
+            error_log('[majStatutConsultation] ' . $e->getMessage());
+            return false;
+        }
     }
 
     /**
@@ -687,22 +761,21 @@ class GestionnaireModel
             }
 
             // Assignation automatique du médecin le moins chargé.
-            // ⚠️ Si aucun médecin "disponible" n'est affecté à ce sous-service,
-            // choisirMedecinMoinsOccupe() retourne 0 (pas NULL). On DOIT bloquer
-            // ici : une consultation insérée avec medecin_id = 0 serait invisible
-            // côté médecin (qui filtre sur un medecin_id réel) ET ne serait
-            // jamais réparée par affecterConsultationsSansMedecinDuJour(), qui ne
-            // recherche que medecin_id IS NULL (0 n'est pas NULL en SQL).
+            // ⚠️ Si aucun médecin "disponible" (connecté à son dashboard
+            // aujourd'hui) n'est affecté à ce sous-service, choisirMedecinMoinsOccupe()
+            // retourne 0. Dans ce cas, on n'empêche PLUS la création de la
+            // consultation : elle est enregistrée avec medecin_id = NULL, et sera
+            // automatiquement récupérée par affecterConsultationsSansMedecinDuJour()
+            // dès qu'un médecin se connectera à son dashboard.
             $medecinId = $this->choisirMedecinMoinsOccupe($ssId);
-            if ($medecinId <= 0) {
-                throw new Exception('Aucun médecin disponible n\'est affecté à ce sous-service pour le moment. Impossible d\'enregistrer la consultation.');
-            }
+            $medecinIdInsert = $medecinId > 0 ? $medecinId : null;
 
             $rang = $this->prochainRang($ssId);
             $dureeEstimee = $this->getDureeEstimee($ssId);
             $motif = !empty($d['motif']) ? htmlspecialchars(trim($d['motif'])) : null;
 
             // Calcul des heures basé sur la logique séquentielle PROPRE À CE MÉDECIN
+            // (ou sur la file "sans médecin" si aucun médecin n'est encore connecté).
             $heures = $this->calculerHeurePassageEstimee($ssId, $date, $medecinId);
             $heurePassage = $heures['heure_debut'];
 
@@ -717,7 +790,7 @@ class GestionnaireModel
             $result = $stmt->execute([
                 ':patient_id'           => $patientId,
                 ':sous_service_id'      => $ssId,
-                ':medecin_id'           => $medecinId,
+                ':medecin_id'           => $medecinIdInsert,
                 ':qr_code_id'           => $d['qr_code_id'] ?? null,
                 ':statut'               => $statut,
                 ':rang'                 => $rang,
@@ -762,7 +835,9 @@ class GestionnaireModel
                    AND statut IN ("en_attente","confirme","en_cours")
                  GROUP BY medecin_id
              ) occ ON occ.medecin_id = m.id
-             WHERE mss.sous_service_id = :ss2 AND m.statut = "disponible"
+             WHERE mss.sous_service_id = :ss2
+               AND m.statut = "disponible"
+               AND DATE(m.derniere_connexion_dashboard) = CURDATE()
              ORDER BY COALESCE(occ.nb, 0) ASC, m.id ASC
              LIMIT 1'
         );

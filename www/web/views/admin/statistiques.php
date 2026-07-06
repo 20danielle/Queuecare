@@ -95,6 +95,7 @@ $nomHopitalStat = $hopital['nom_hopital'] ?? 'Hôpital';
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
             <!-- Sélecteur de période -->
             <div class="periode-nav">
+                <button class="btn-per-adm" data-j="0" onclick="admChangerPeriode(this,0)">Aujourd'hui</button>
                 <button class="btn-per-adm active" data-j="7"  onclick="admChangerPeriode(this,7)">7 j</button>
                 <button class="btn-per-adm" data-j="30" onclick="admChangerPeriode(this,30)">30 j</button>
                 <button class="btn-per-adm" data-j="90" onclick="admChangerPeriode(this,90)">3 mois</button>
@@ -797,4 +798,3 @@ $nomHopitalStat = $hopital['nom_hopital'] ?? 'Hôpital';
     }
 })();
 </script>
-

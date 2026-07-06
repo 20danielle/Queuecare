@@ -80,6 +80,36 @@ class MedecinModel
         return $stmt->fetch();
     }
 
+    /**
+     * À appeler à chaque accès au dashboard médecin (chargement de page ET
+     * heartbeat AJAX). Sert de marqueur "le médecin est bien connecté
+     * aujourd'hui" pour le routage automatique des consultations.
+     */
+    public function marquerConnexionDashboard(int $medecinId): bool
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE medecins SET derniere_connexion_dashboard = NOW() WHERE id = :id'
+        );
+        return $stmt->execute([':id' => $medecinId]);
+    }
+
+    /**
+     * Un médecin est considéré "connecté aujourd'hui" s'il a chargé son
+     * dashboard au moins une fois depuis minuit. Cela empêche
+     * choisirMedecinMoinsOccupe() de lui envoyer des patients tant qu'il
+     * n'a pas explicitement ouvert son espace (retard ou indisponibilité
+     * non prévenue).
+     */
+    public function estConnecteAujourdhui(int $medecinId): bool
+    {
+        $stmt = $this->db->prepare(
+            'SELECT derniere_connexion_dashboard FROM medecins
+             WHERE id = :id AND DATE(derniere_connexion_dashboard) = CURDATE()'
+        );
+        $stmt->execute([':id' => $medecinId]);
+        return (bool)$stmt->fetchColumn();
+    }
+
     public function getSousServiceMedecin(int $medecinId)
     {
         $stmt = $this->db->prepare(
@@ -118,6 +148,7 @@ class MedecinModel
              ) occ ON occ.medecin_id = m.id
              WHERE mss.sous_service_id = :ss2
                AND m.statut = "disponible"
+               AND DATE(m.derniere_connexion_dashboard) = CURDATE()
              ORDER BY COALESCE(occ.nb, 0) ASC, m.id ASC
              LIMIT 1'
         );
@@ -555,6 +586,120 @@ class MedecinModel
         }
     }
 
+    /**
+     * Liste les médecins censés travailler aujourd'hui (jour actif +
+     * affectés à un sous-service, statut "disponible") mais qui ne se sont
+     * pas encore connectés à leur dashboard, alors que l'ouverture du
+     * service + un délai de grâce sont déjà passés. Sert de base à la
+     * détection automatique de retard/indisponibilité imprévue.
+     */
+    public function listerMedecinsEnRetardNonConnectes(int $delaiGraceMinutes = 20): array
+    {
+        $jourSemaine = (int)date('N'); // 1=Lundi..7=Dimanche
+
+        $stmt = $this->db->prepare(
+            'SELECT m.id, m.nom, m.prenom, m.statut,
+                    m.derniere_connexion_dashboard,
+                    mss.sous_service_id, ss.nom AS sous_service_nom,
+                    s.horaires_ouverture
+             FROM medecins m
+             JOIN medecin_jours_travail mjt ON mjt.medecin_id = m.id AND mjt.jour_semaine = :jour AND mjt.actif = 1
+             JOIN medecin_sous_service mss ON mss.medecin_id = m.id
+             JOIN sous_services ss ON ss.id = mss.sous_service_id
+             JOIN services s ON s.id = ss.service_id
+             WHERE m.statut = "disponible"
+               AND DATE(COALESCE(m.derniere_connexion_dashboard, "1970-01-01")) <> CURDATE()
+               AND NOW() > TIMESTAMP(CURDATE(), s.horaires_ouverture) + INTERVAL :grace MINUTE'
+        );
+        $stmt->execute([':jour' => $jourSemaine, ':grace' => $delaiGraceMinutes]);
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Réaffecte les patients déjà en attente d'un médecin en retard/indisponible
+     * vers d'autres médecins disponibles ET connectés du même sous-service.
+     * Ne touche pas aux consultations déjà "en_cours"/"en_pause" (le patient
+     * est déjà pris en charge physiquement).
+     *
+     * Retourne un détail exploitable pour la notification et l'IHM du
+     * gestionnaire : ['reaffectees' => [...], 'sans_solution' => [...]]
+     */
+    public function reaffecterFileVersMedecinsDisponibles(int $medecinIndisponibleId, int $ssId, string $date = ''): array
+    {
+        $date = $date ?: date('Y-m-d');
+        $reaffectees   = [];
+        $sansSolution  = [];
+
+        try {
+            $this->db->beginTransaction();
+
+            $stmt = $this->db->prepare(
+                'SELECT id, patient_id, duree_estimee
+                 FROM consultations
+                 WHERE medecin_id = :mid
+                   AND sous_service_id = :ss
+                   AND DATE(COALESCE(heure_passage_estimee, heure_emission)) = :date
+                   AND statut IN ("en_attente", "confirme")
+                 ORDER BY rang ASC, heure_emission ASC'
+            );
+            $stmt->execute([':mid' => $medecinIndisponibleId, ':ss' => $ssId, ':date' => $date]);
+            $consultations = $stmt->fetchAll();
+
+            foreach ($consultations as $c) {
+                $nouveauMedecinId = $this->choisirMedecinMoinsOccupe($ssId, $date);
+
+                // Aucun autre médecin dispo/connecté : on laisse le patient
+                // en file (statut inchangé), à traiter manuellement.
+                if (!$nouveauMedecinId || $nouveauMedecinId === $medecinIndisponibleId) {
+                    $sansSolution[] = $c['id'];
+                    continue;
+                }
+
+                // Nouveau rang = dernier rang du médecin cible + 1
+                $stmtRang = $this->db->prepare(
+                    'SELECT COALESCE(MAX(rang), 0) FROM consultations
+                     WHERE medecin_id = :mid
+                       AND DATE(COALESCE(heure_passage_estimee, heure_emission)) = :date
+                       AND statut NOT IN ("annule", "absent")'
+                );
+                $stmtRang->execute([':mid' => $nouveauMedecinId, ':date' => $date]);
+                $nouveauRang = (int)$stmtRang->fetchColumn() + 1;
+
+                $duree = (int)($c['duree_estimee'] ?? 1800);
+                $nouvelleHeure = date('Y-m-d H:i:s', strtotime("$date 00:00:00") + ($nouveauRang - 1) * $duree);
+
+                $stmtUpdate = $this->db->prepare(
+                    'UPDATE consultations
+                     SET medecin_id = :new_mid,
+                         rang = :rang,
+                         heure_passage_estimee = :heure
+                     WHERE id = :id'
+                );
+                $stmtUpdate->execute([
+                    ':new_mid' => $nouveauMedecinId,
+                    ':rang'    => $nouveauRang,
+                    ':heure'   => $nouvelleHeure,
+                    ':id'      => $c['id'],
+                ]);
+
+                $reaffectees[] = [
+                    'consultation_id'   => (int)$c['id'],
+                    'patient_id'        => (int)$c['patient_id'],
+                    'ancien_medecin_id' => $medecinIndisponibleId,
+                    'nouveau_medecin_id'=> $nouveauMedecinId,
+                    'nouveau_rang'      => $nouveauRang,
+                    'nouvelle_heure'    => $nouvelleHeure,
+                ];
+            }
+
+            $this->db->commit();
+        } catch (\PDOException $e) {
+            $this->db->rollBack();
+        }
+
+        return ['reaffectees' => $reaffectees, 'sans_solution' => $sansSolution];
+    }
+
     public function majStatutConsultation(int $id, string $statut): bool
     {
         $allowed = ['en_attente', 'confirme', 'en_cours', 'traite', 'annule', 'absent'];
@@ -664,7 +809,7 @@ class MedecinModel
      */
     public function historiquePagine(int $medecinId, int $page, int $perPage, string $statut = '', string $dateDebut = '', string $dateFin = ''): array
     {
-        $conditions = ['c.medecin_id = :mid', 'DATE(c.heure_passage_estimee) < CURDATE() OR c.statut IN ("traite","annule","absent")'];
+        $conditions = ['c.medecin_id = :mid', '(DATE(c.heure_passage_estimee) < CURDATE() OR c.statut IN ("traite","annule","absent"))'];
         $params = [':mid' => $medecinId];
 
         if ($statut !== '') {

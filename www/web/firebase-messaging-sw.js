@@ -118,6 +118,18 @@ const NOTIF_CONFIG = {
             { action: 'open',   title: 'Voir les nouveaux horaires' }
         ]
     },
+    REAFFECTATION_MEDECIN: {
+        icon:               '/public/images/logo.png',
+        badge:              '/public/images/badge.png',
+        vibrate:            [300, 100, 300],
+        requireInteraction: true,
+        tag:                'reaffectation-medecin',
+        renotify:           true,
+        actions: [
+            { action: 'open',   title: 'Voir ma nouvelle position' },
+            { action: 'close',  title: 'Fermer' }
+        ]
+    },
     URGENCE: {
         icon:               '/public/images/logo.png',
         badge:              '/public/images/badge.png',

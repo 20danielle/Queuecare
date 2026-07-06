@@ -18,6 +18,7 @@
 require_once __DIR__ . '/NotificationHelper.php';
 require_once __DIR__ . '/../models/NotificationModel.php';
 require_once __DIR__ . '/../models/PatientModel.php';
+require_once __DIR__ . '/../models/MedecinModel.php';
 require_once __DIR__ . '/../config/database.php';
 
 class QueueNotificationService
@@ -25,6 +26,7 @@ class QueueNotificationService
     private NotificationHelper  $helper;
     private NotificationModel   $notifModel;
     private PatientModel        $patientModel;
+    private MedecinModel        $medecinModel;
     private PDO                 $db;
 
     public function __construct()
@@ -32,6 +34,7 @@ class QueueNotificationService
         $this->helper       = NotificationHelper::getInstance();
         $this->notifModel   = new NotificationModel();
         $this->patientModel = new PatientModel();
+        $this->medecinModel = new MedecinModel();
         $this->db           = Database::getInstance()->getConnection();
     }
 
@@ -357,6 +360,87 @@ class QueueNotificationService
                 (int)$patient['patient_id'],
                 (int)$patient['id'],
                 'DECALAGE',
+                $corps,
+                $result['success']
+            );
+        }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       7bis. RÉAFFECTATION MÉDECIN (retard / indisponibilité imprévue)
+       → Notifie chaque patient déplacé vers un autre médecin. Notification
+         push "vraie" : elle s'affiche sur l'écran du patient même si
+         l'application n'est pas ouverte (gérée par le service worker
+         firebase-messaging-sw.js, onBackgroundMessage → showNotification).
+    ═══════════════════════════════════════════════════════════════════ */
+
+    public function onReaffectationMedecin(array $reaffectation): void
+    {
+        if (!$this->helper->isConfigured()) return;
+
+        foreach ($reaffectation['reaffectees'] as $item) {
+            $token = $this->patientModel->getTokenFCM((int)$item['patient_id']);
+            if (!$token) continue;
+
+            $nouveauMedecin = $this->medecinModel->trouverParId((int)$item['nouveau_medecin_id']);
+            $nomMedecin     = $nouveauMedecin
+                ? 'Dr ' . $nouveauMedecin['prenom'] . ' ' . $nouveauMedecin['nom']
+                : 'un autre médecin disponible';
+            $nouvelleHeure  = date('H:i', strtotime($item['nouvelle_heure']));
+
+            $corps = "Votre médecin initial a un retard imprévu. "
+                   . "Vous avez été réaffecté(e) à {$nomMedecin} (position {$item['nouveau_rang']}). "
+                   . "Nouvelle heure estimée : {$nouvelleHeure}.";
+
+            $result = $this->helper->sendToDevice(
+                $token,
+                '🔄 Changement de médecin',
+                $corps,
+                [
+                    'type'            => 'REAFFECTATION_MEDECIN',
+                    'rang'            => (string)$item['nouveau_rang'],
+                    'consultation_id' => (string)$item['consultation_id'],
+                    'url'             => '/patient/dashboard.php',
+                ]
+            );
+
+            $this->persisterNotification(
+                (int)$item['patient_id'],
+                (int)$item['consultation_id'],
+                'REAFFECTATION_MEDECIN',
+                $corps,
+                $result['success']
+            );
+        }
+
+        // Patients pour qui aucune réaffectation n'a été possible : on les
+        // prévient quand même, sans leur donner de fausse heure.
+        foreach ($reaffectation['sans_solution'] as $consultationId) {
+            $consult = $this->getConsultationDetails($consultationId);
+            if (!$consult) continue;
+
+            $token = $this->patientModel->getTokenFCM((int)$consult['patient_id']);
+            if (!$token) continue;
+
+            $corps = "Votre médecin a un retard imprévu. Aucun autre médecin n'est disponible "
+                   . "pour le moment, votre position dans la file est maintenue. "
+                   . "Vous serez notifié(e) dès que la situation évolue.";
+
+            $result = $this->helper->sendToDevice(
+                $token,
+                '⚠️ Retard médecin',
+                $corps,
+                [
+                    'type'            => 'REAFFECTATION_MEDECIN',
+                    'consultation_id' => (string)$consultationId,
+                    'url'             => '/patient/dashboard.php',
+                ]
+            );
+
+            $this->persisterNotification(
+                (int)$consult['patient_id'],
+                $consultationId,
+                'REAFFECTATION_MEDECIN',
                 $corps,
                 $result['success']
             );

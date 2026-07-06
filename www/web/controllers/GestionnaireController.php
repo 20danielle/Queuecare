@@ -6,6 +6,7 @@
 
 require_once __DIR__ . '/../models/GestionnaireModel.php';
 require_once __DIR__ . '/../models/UtilisateurModel.php';
+require_once __DIR__ . '/../models/MedecinModel.php';
 require_once __DIR__ . '/../helpers/AuthHelper.php';
 require_once __DIR__ . '/../helpers/QueueNotificationService.php';
 require_once __DIR__ . '/../helpers/LangHelper.php';
@@ -14,6 +15,7 @@ class GestionnaireController
 {
     private GestionnaireModel $model;
     private UtilisateurModel $utilisateurModel;
+    private MedecinModel $medecinModel;
     private ?string $initError = null;
 
     public function __construct()
@@ -21,6 +23,7 @@ class GestionnaireController
         try {
             $this->model = new GestionnaireModel();
             $this->utilisateurModel = new UtilisateurModel();
+            $this->medecinModel = new MedecinModel();
         } catch (\Throwable $e) {
             error_log('[Gestionnaire] Erreur initialisation: ' . $e->getMessage());
             $this->initError = 'Erreur d\'initialisation (base de données ?) : ' . $e->getMessage();
@@ -330,7 +333,17 @@ class GestionnaireController
             $autorises = ['traite', 'annule', 'absent'];
             
             if ($cId > 0 && in_array($statut, $autorises, true)) {
-                $this->model->majStatutConsultation($cId, $statut);
+                try {
+                    $ok = $this->model->majStatutConsultation($cId, $statut);
+                } catch (\RuntimeException $e) {
+                    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+                    exit;
+                }
+
+                if (!$ok) {
+                    echo json_encode(['success' => false, 'message' => 'Consultation introuvable.']);
+                    exit;
+                }
 
                 // Notifications push selon le nouveau statut
                 try {
@@ -351,6 +364,39 @@ class GestionnaireController
                 exit;
             }
             echo json_encode(['success' => false, 'message' => 'Action invalide.']);
+            exit;
+        }
+
+        // Action: Signaler un retard/indisponibilité imprévue du médecin.
+        // Le gestionnaire confirme manuellement (recommandé) après avoir été
+        // alerté — automatiquement ou en constatant que le médecin n'est
+        // pas connecté — puis les patients déjà en attente sont réaffectés
+        // à un autre médecin disponible ET connecté du même sous-service,
+        // avec notification push (arrière-plan) à chacun.
+        if ($action === 'signaler_indisponibilite_medecin') {
+            $medecinId = (int)($_POST['medecin_id'] ?? 0);
+
+            if ($medecinId <= 0) {
+                echo json_encode(['success' => false, 'message' => 'Médecin invalide.']);
+                exit;
+            }
+
+            $resultat = $this->medecinModel->reaffecterFileVersMedecinsDisponibles($medecinId, (int)$ssId);
+
+            try {
+                $notifSvc = new QueueNotificationService();
+                $notifSvc->onReaffectationMedecin($resultat);
+            } catch (\Throwable $e) {
+                error_log('[FCM] signaler_indisponibilite_medecin: ' . $e->getMessage());
+            }
+
+            echo json_encode([
+                'success'       => true,
+                'reaffectees'   => count($resultat['reaffectees']),
+                'sans_solution' => count($resultat['sans_solution']),
+                'message'       => count($resultat['reaffectees']) . ' patient(s) réaffecté(s), '
+                                  . count($resultat['sans_solution']) . ' en attente d\'une solution.',
+            ]);
             exit;
         }
 
@@ -467,6 +513,14 @@ class GestionnaireController
         unset($c);
         foreach ($consultations as &$c) {
             $c['heure_passage_estimee'] = $c['heure_passage_estimee'] ? date('H:i', strtotime($c['heure_passage_estimee'])) : '—';
+            if ($c['statut'] === 'en_pause' && !empty($c['heure_pause'])) {
+                $c['secondes_en_pause'] = (int)(time() - strtotime($c['heure_pause']));
+                $c['heure_pause_fmt']   = date('H:i', strtotime($c['heure_pause']));
+            } else {
+                $c['secondes_en_pause'] = 0;
+                $c['heure_pause_fmt']   = null;
+            }
+            $c['priorite_retour'] = (int)($c['priorite_retour'] ?? 0);
         }
         unset($c);
         
@@ -840,7 +894,8 @@ class GestionnaireController
         }
 
         $ssId      = (int)$sousService['id'];
-        $jours     = max(7, min(365, (int)($_GET['jours'] ?? 7)));
+        // jours=0 = "Aujourd'hui"
+        $jours     = max(0, min(365, (int)($_GET['jours'] ?? 7)));
         $evolution = $this->model->statsEvolutionSS($ssId, $jours);
         $totaux    = $this->model->statsTotalesSS($ssId, $jours);
         $parMedecin = $this->model->repartitionParMedecin($ssId, $jours);
