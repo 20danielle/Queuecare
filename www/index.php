@@ -61,11 +61,10 @@
 <div class="hero">
     <div class="logo">🏥</div>
     <h1>QueueCare</h1>
-    <p>Système intelligent de gestion des files d'attente pour les établissements de santé.</p>
+    <p>Système automatisé de gestion des files d'attente au sein d'un service hospitalier.</p>
     <div>
         <span class="badge">Projet PFE <?= date('Y') ?></span>
         <span class="badge">Web + Android</span>
-        <span class="badge">PHP · MySQL · Kotlin</span>
     </div>
 </div>
 
@@ -111,16 +110,6 @@
             <div><div class="cred-label">Mot de passe</div><div class="cred-value">Admin1234!</div></div>
         </div>
     </div>
-</div>
-
-<div class="stack">
-    <span class="tech">PHP 8.2</span><span class="tech">MySQL 8.0</span>
-    <span class="tech">Kotlin</span><span class="tech">Jetpack Compose</span>
-    <span class="tech">Retrofit</span><span class="tech">Firebase FCM</span>
-    <span class="tech">JWT Auth</span><span class="tech">REST API</span>
-    <span class="tech">Docker</span><span class="tech">Railway</span>
-    <span class="tech">Clean Architecture</span><span class="tech">MVC</span>
-    <span class="tech">Bootstrap 5</span><span class="tech">QR Code</span>
 </div>
 
 <footer>QueueCare — Projet de Fin d'Études <?= date('Y') ?></footer>
