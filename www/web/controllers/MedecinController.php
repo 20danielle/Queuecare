@@ -36,8 +36,9 @@ class MedecinController
             header('Location: medecin.php?action=dashboard');
             exit;
         }
-        $erreurs    = [];
-        $anciens    = [];
+        $erreurs      = [];
+        $anciens      = [];
+        $sousServices = $this->model->getSousServicesActifs();
         require __DIR__ . '/../views/medecin/inscription.php';
     }
 
@@ -212,6 +213,28 @@ class MedecinController
         $_SESSION['role']          = $user['role'];
         $_SESSION['last_activity'] = time();
 
+        // Le médecin se reconnecte : on annule toute urgence en attente et
+        // on le repasse "disponible" (actif), qu'une urgence ait été
+        // déclenchée ou non par le gestionnaire pendant son absence.
+        $this->model->reactiverApresConnexion((int)$user['medecin_id']);
+
+        // Si sa file (ou une partie) avait été réaffectée à d'autres
+        // médecins du sous-service pendant son indisponibilité, et qu'elle
+        // n'a pas encore été traitée, le simple fait de se reconnecter la
+        // lui restitue automatiquement. On notifie chaque patient concerné
+        // qu'il doit revenir vers son médecin initial.
+        $consultationsRestituees = $this->model->restaurerFileMedecin((int)$user['medecin_id']);
+        if (!empty($consultationsRestituees)) {
+            try {
+                $notifSvc = new QueueNotificationService();
+                foreach ($consultationsRestituees as $cId) {
+                    $notifSvc->onRetourMedecinTitulaire((int)$cId);
+                }
+            } catch (\Throwable $e) {
+                error_log('[FCM] restaurerFileMedecin: ' . $e->getMessage());
+            }
+        }
+
         // Restaurer la langue préférée du médecin
         $medecinData = $this->model->trouverParId((int)$user['medecin_id']);
         LangHelper::setLang($medecinData['langue'] ?? 'fr');
@@ -299,6 +322,23 @@ class MedecinController
         // le médecin est bien présent/actif aujourd'hui.
         $this->model->marquerConnexionDashboard((int)$medecinId);
 
+        // Le gestionnaire a peut-être déclenché une urgence pendant que ce
+        // médecin n'avait aucune consultation active : la bascule en
+        // "indisponible" a déjà eu lieu côté serveur, il ne reste plus qu'à
+        // avertir ce dashboard (qui n'était pas au courant) puis à le
+        // déconnecter automatiquement.
+        if ($this->model->consommerNotificationUrgence((int)$medecinId)) {
+            $reponse = [
+                'success'      => true,
+                'force_logout' => true,
+                'message'      => 'Le gestionnaire vous a placé en indisponibilité (urgence). Vous allez être déconnecté.',
+                'redirect'     => 'medecin.php?action=connexion&urgence=1',
+            ];
+            AuthHelper::deconnecter();
+            echo json_encode($reponse);
+            exit;
+        }
+
         $affectation = $this->model->getSousServiceMedecin($medecinId);
 
         if (!$affectation) {
@@ -377,6 +417,24 @@ class MedecinController
                     error_log('[FCM] mettreEnPause: ' . $e->getMessage());
                 }
             }
+
+            // Une urgence était en attente (déclenchée par le gestionnaire
+            // pendant que ce médecin était en pleine consultation) : le
+            // mettre en pause suffit à le faire sortir de cet état, donc on
+            // applique l'urgence maintenant et on le déconnecte, sans
+            // attendre qu'il termine réellement la consultation.
+            $medecinIdActuel = (int)$_SESSION['medecin_id'];
+            if ($this->model->appliquerUrgenceSiEnAttente($medecinIdActuel)) {
+                $this->redistribuerFileUrgence($medecinIdActuel, $ssId);
+                AuthHelper::deconnecter();
+                echo json_encode([
+                    'success'  => true,
+                    'message'  => 'Consultation mise en pause. Vous avez été placé en indisponibilité suite à une urgence signalée par le gestionnaire.',
+                    'redirect' => 'medecin.php?action=connexion&urgence=1',
+                ]);
+                exit;
+            }
+
             echo json_encode(['success' => true, 'message' => 'Consultation mise en pause']);
         } else {
             echo json_encode(['success' => false, 'message' => 'Impossible de mettre en pause (la consultation doit être en cours)']);
@@ -415,6 +473,14 @@ class MedecinController
         $consultationId = (int)($_POST['consultation_id'] ?? 0);
 
         if ($consultationId && $this->model->demarrerConsultation($consultationId)) {
+            // Notification push : le patient est informé que sa consultation
+            // démarre, avec l'heure de démarrage (Douala, exacte).
+            try {
+                $notifSvc = new QueueNotificationService();
+                $notifSvc->onConsultationDemarree($consultationId);
+            } catch (\Throwable $e) {
+                error_log('[FCM] demarrerConsultation: ' . $e->getMessage());
+            }
             echo json_encode(['success' => true, 'message' => 'Consultation démarrée']);
         } else {
             echo json_encode(['success' => false, 'message' => 'Impossible de démarrer cette consultation']);
@@ -442,15 +508,33 @@ class MedecinController
         $ssId = $affectation ? (int)$affectation['ss_id'] : 0;
 
         if ($this->model->terminerConsultation($consultationId)) {
-            // Notifications push : avancement de toute la file
+            // Notifications push : le patient concerné est informé que sa
+            // consultation est terminée, puis le reste de la file est avancé.
             if ($ssId > 0) {
                 try {
                     $notifSvc = new QueueNotificationService();
+                    $notifSvc->onConsultationTermineePourPatient($consultationId);
                     $notifSvc->onConsultationTerminee($consultationId, $ssId);
                 } catch (\Throwable $e) {
                     error_log('[FCM] terminerConsultation: ' . $e->getMessage());
                 }
             }
+
+            // Une urgence était en attente (déclenchée par le gestionnaire
+            // pendant cette consultation) : on l'applique maintenant et on
+            // déconnecte le médecin.
+            $medecinIdActuel = (int)$_SESSION['medecin_id'];
+            if ($this->model->appliquerUrgenceSiEnAttente($medecinIdActuel)) {
+                $this->redistribuerFileUrgence($medecinIdActuel, $ssId);
+                AuthHelper::deconnecter();
+                echo json_encode([
+                    'success'  => true,
+                    'message'  => 'Consultation terminée. Vous avez été placé en indisponibilité suite à une urgence signalée par le gestionnaire.',
+                    'redirect' => 'medecin.php?action=connexion&urgence=1',
+                ]);
+                exit;
+            }
+
             echo json_encode(['success' => true, 'message' => 'Consultation terminée']);
         } else {
             echo json_encode(['success' => false, 'message' => 'Impossible de terminer cette consultation']);
@@ -486,6 +570,21 @@ class MedecinController
                     error_log('[FCM] marquerAbsent: ' . $e->getMessage());
                 }
             }
+
+            // Idem que pour terminerConsultationAjax : ce patient pouvait
+            // être "en_cours" au moment où l'urgence a été déclarée.
+            $medecinIdActuel = (int)$_SESSION['medecin_id'];
+            if ($this->model->appliquerUrgenceSiEnAttente($medecinIdActuel)) {
+                $this->redistribuerFileUrgence($medecinIdActuel, $ssId);
+                AuthHelper::deconnecter();
+                echo json_encode([
+                    'success'  => true,
+                    'message'  => 'Patient marqué comme absent. Vous avez été placé en indisponibilité suite à une urgence signalée par le gestionnaire.',
+                    'redirect' => 'medecin.php?action=connexion&urgence=1',
+                ]);
+                exit;
+            }
+
             echo json_encode(['success' => true, 'message' => 'Patient marqué comme absent']);
         } else {
             echo json_encode(['success' => false, 'message' => 'Impossible de marquer ce patient comme absent']);
@@ -510,6 +609,31 @@ class MedecinController
         }
         exit;
     }
+
+    /**
+     * Répartit équitablement la file du jour non encore prise en charge
+     * (statuts "en_attente"/"confirme") d'un médecin devenu indisponible
+     * (urgence déclenchée par le gestionnaire) vers les autres médecins
+     * disponibles et connectés du même sous-service, puis notifie les
+     * patients concernés (réaffectés ou sans solution). Ne fait rien si
+     * $ssId est invalide ou si le médecin est seul sur son sous-service
+     * (dans ce cas la file reste simplement en attente, cf.
+     * reaffecterFileVersMedecinsDisponibles).
+     */
+    private function redistribuerFileUrgence(int $medecinId, int $ssId): void
+    {
+        if ($ssId <= 0) return;
+
+        $resultat = $this->model->reaffecterFileVersMedecinsDisponibles($medecinId, $ssId);
+
+        try {
+            $notifSvc = new QueueNotificationService();
+            $notifSvc->onReaffectationMedecin($resultat);
+        } catch (\Throwable $e) {
+            error_log('[FCM] redistribuerFileUrgence: ' . $e->getMessage());
+        }
+    }
+
     public function getPlanningMedecin(): void
     {
         header('Content-Type: application/json');
@@ -844,6 +968,16 @@ class MedecinController
         }
 
         $result = $this->model->fixerProchainRdv($consultationId, $dateRdv, $heureRdv, $motif);
+
+        if (!empty($result['success']) && !empty($result['rdv_id'])) {
+            try {
+                $notifSvc = new QueueNotificationService();
+                $notifSvc->onProchainRdvFixe($consultationId, (int)$result['rdv_id'], $dateRdv, $heureRdv);
+            } catch (\Throwable $e) {
+                error_log('[FCM] fixerProchainRdv: ' . $e->getMessage());
+            }
+        }
+
         echo json_encode($result);
         exit;
     }

@@ -6,6 +6,7 @@
 require_once __DIR__ . '/../helpers/AuthHelper.php';
 require_once __DIR__ . '/../models/UtilisateurModel.php';
 require_once __DIR__ . '/../models/HopitalModel.php';
+require_once __DIR__ . '/../models/MedecinModel.php';
 require_once __DIR__ . '/../config/app.php';
 require_once __DIR__ . '/../helpers/LangHelper.php';
 
@@ -50,6 +51,9 @@ class AuthController {
 
             if (!empty($user['medecin_id'])) {
                 $_SESSION['medecin_id'] = $user['medecin_id'];
+                // Se reconnecter = de nouveau opérationnel : on annule
+                // toute urgence en attente et on repasse "disponible".
+                (new MedecinModel())->reactiverApresConnexion((int)$user['medecin_id']);
             }
             if (!empty($user['gestionnaire_id'])) {
                 $_SESSION['gestionnaire_id'] = $user['gestionnaire_id'];
@@ -301,6 +305,7 @@ class AuthController {
 
         if (!empty($user['medecin_id'])) {
             $_SESSION['medecin_id'] = $user['medecin_id'];
+            (new MedecinModel())->reactiverApresConnexion((int)$user['medecin_id']);
         }
         if (!empty($user['gestionnaire_id'])) {
             $_SESSION['gestionnaire_id'] = $user['gestionnaire_id'];

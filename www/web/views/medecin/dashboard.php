@@ -765,6 +765,14 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
         isRefreshing = true;
         fetch('medecin.php?action=get_consultations_data')
             .then(r => r.json()).then(d => {
+                // Le gestionnaire a déclenché une urgence (aucune consultation
+                // n'était en cours au moment du clic) : on avertit le médecin
+                // puis on le déconnecte automatiquement de son dashboard.
+                if (d.force_logout) {
+                    alert(d.message || 'Vous avez été placé en indisponibilité par le gestionnaire (urgence).');
+                    window.location.href = d.redirect || 'medecin.php?action=connexion&urgence=1';
+                    return;
+                }
                 // DEBUG TEMPORAIRE : journalise la réponse brute du serveur pour diagnostiquer
                 // les cas où la liste de consultations se vide après une action.
                 console.log('[DEBUG rafraichirConsultations]', d);
@@ -964,7 +972,7 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
             body: 'consultation_id=' + id
         })
         .then(r => r.json()).then(d => {
-            if (d.redirect) { window.location.href = d.redirect; return; }
+            if (d.redirect) { if (d.message) alert(d.message); window.location.href = d.redirect; return; }
             if (d.success) {
                 afficherMessage(t('consultation_finished'), 'success');
                 rafraichirConsultations();
@@ -983,7 +991,7 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
             body: 'consultation_id=' + id
         })
         .then(r => r.json()).then(d => {
-            if (d.redirect) { window.location.href = d.redirect; return; }
+            if (d.redirect) { if (d.message) alert(d.message); window.location.href = d.redirect; return; }
             if (d.success) {
                 afficherMessage(t('patient_marked_absent'), 'success');
                 rafraichirConsultations();
@@ -1066,6 +1074,8 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
                 .catch(() => afficherMessage(t('retry_please'), 'error'));
         }
     }
+
+
     
     function toggleSidebar(){
         const sb=document.getElementById('sidebar'), ov=document.getElementById('sidebarOverlay'), hb=document.getElementById('hamburgerBtn');
@@ -1313,27 +1323,29 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
 
                 html+=`<div class="${slotClass}">`;
 
-                if(!travaille){
+                const key=dateStr+'|'+heure;
+                const cons=(consIndex[key]||[]);
+
+                if(cons.length>0){
+                    // Une consultation réellement enregistrée doit toujours être
+                    // visible, même si le créneau est par ailleurs marqué "fermé"
+                    // ou "pause" (ex: décalage horaire de la pause après coup).
+                    cons.forEach(c=>{
+                        const evCls=c.statut==='en_cours'?'ev-cours':(c.statut==='traite'?'ev-traite':(c.statut==='en_pause'?'ev-pause':(c.statut==='absent'?'ev-absent':'ev-attente')));
+                        const badge=c.statut==='en_cours'?'En cours':(c.statut==='traite'?'Traité':(c.statut==='en_pause'?'En pause':(c.statut==='absent'?'Absent':'Programmé')));
+                        const hDebut = c.heure_debut || heure;
+                        const hFin   = c.heure_fin   || '';
+                        const plage  = hFin ? `${hDebut} – ${hFin}` : hDebut;
+                        html+=`<div class="gcal-event ${evCls}" title="${escapeHtml(c.patient_nom)} ${escapeHtml(c.patient_prenom)} | ${plage}">
+                            <span class="gcal-event-time">${plage}</span>
+                            <span class="gcal-event-name">${escapeHtml(c.patient_nom)} ${escapeHtml((c.patient_prenom||'')[0]||'')}.</span>
+                            <span class="gcal-event-badge">${badge}</span>
+                        </div>`;
+                    });
+                } else if(!travaille){
                     html+=`<div class="gcal-slot-empty" style="font-size:.62rem;color:#cbd5e1;"><i class="fa-solid fa-moon"></i></div>`;
                 } else if(isPause){
                     html+=`<div class="gcal-event ev-pause"><span class="gcal-event-time"><i class="fa-solid fa-utensils"></i> Pause</span></div>`;
-                } else {
-                    const key=dateStr+'|'+heure;
-                    const cons=(consIndex[key]||[]);
-                    if(cons.length>0){
-                        cons.forEach(c=>{
-                            const evCls=c.statut==='en_cours'?'ev-cours':(c.statut==='traite'?'ev-traite':(c.statut==='en_pause'?'ev-pause':(c.statut==='absent'?'ev-absent':'ev-attente')));
-                            const badge=c.statut==='en_cours'?'En cours':(c.statut==='traite'?'Traité':(c.statut==='en_pause'?'En pause':(c.statut==='absent'?'Absent':'Programmé')));
-                            const hDebut = c.heure_debut || heure;
-                            const hFin   = c.heure_fin   || '';
-                            const plage  = hFin ? `${hDebut} – ${hFin}` : hDebut;
-                            html+=`<div class="gcal-event ${evCls}" title="${escapeHtml(c.patient_nom)} ${escapeHtml(c.patient_prenom)} | ${plage}">
-                                <span class="gcal-event-time">${plage}</span>
-                                <span class="gcal-event-name">${escapeHtml(c.patient_nom)} ${escapeHtml((c.patient_prenom||'')[0]||'')}.</span>
-                                <span class="gcal-event-badge">${badge}</span>
-                            </div>`;
-                        });
-                    }
                 }
                 html+='</div>';
             });

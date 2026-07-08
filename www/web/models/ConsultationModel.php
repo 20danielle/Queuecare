@@ -1,12 +1,12 @@
 <?php
 /**
- * models/GestionnaireModel.php
- * Modèle MVC — Gestionnaire
+ * models/ConsultationModel.php
+ * Modèle MVC — Consultations (file d'attente, prise sur place, QR code, en ligne)
  */
 
 require_once __DIR__ . '/../config/database.php';
 
-class GestionnaireModel
+class ConsultationModel
 {
     private PDO $db;
 
@@ -780,6 +780,14 @@ class GestionnaireModel
             }
 
             $nouvelId = (int)$this->db->lastInsertId();
+
+            // Occuper le créneau correspondant dans le planning du médecin
+            // assigné, pour que la prise sur place / par QR code / en ligne
+            // se reflète comme tout autre rendez-vous dans son emploi du temps.
+            if ($medecinIdInsert) {
+                $this->reserverCreneauEdt($ssId, $medecinIdInsert, $date, $heurePassage);
+            }
+
             if (!$dejaEnTransaction) $this->db->commit();
             return $nouvelId;
         } catch (\Throwable $e) {
@@ -787,6 +795,53 @@ class GestionnaireModel
                 $this->db->rollBack();
             }
             throw $e;
+        }
+    }
+
+    /**
+     * Met à jour (ou crée) la ligne emplois_du_temps correspondant au
+     * créneau horaire occupé par une consultation, afin que le planning du
+     * médecin affiché à l'administrateur/au médecin reflète bien toutes les
+     * consultations prises (sur place, par QR code, en ligne ou manuellement).
+     */
+    private function reserverCreneauEdt(int $ssId, int $medecinId, string $date, string $heure): void
+    {
+        $heureDebut = date('H:00:00', strtotime($heure));
+        $heureFin   = date('H:00:00', strtotime($heure . ' +1 hour'));
+
+        $stmt = $this->db->prepare(
+            'SELECT id, nb_creneaux FROM emplois_du_temps
+             WHERE medecin_id      = :mid
+               AND sous_service_id = :ss
+               AND jour            = :jour
+               AND heure_debut     = :hdebut'
+        );
+        $stmt->execute([
+            ':mid'    => $medecinId,
+            ':ss'     => $ssId,
+            ':jour'   => $date,
+            ':hdebut' => $heureDebut,
+        ]);
+        $row = $stmt->fetch();
+
+        if ($row) {
+            $upd = $this->db->prepare(
+                'UPDATE emplois_du_temps SET nb_creneaux = nb_creneaux + 1 WHERE id = :id'
+            );
+            $upd->execute([':id' => $row['id']]);
+        } else {
+            $ins = $this->db->prepare(
+                'INSERT INTO emplois_du_temps
+                    (sous_service_id, medecin_id, jour, heure_debut, heure_fin, nb_creneaux)
+                 VALUES (:ss, :mid, :jour, :hdebut, :hfin, 1)'
+            );
+            $ins->execute([
+                ':ss'     => $ssId,
+                ':mid'    => $medecinId,
+                ':jour'   => $date,
+                ':hdebut' => $heureDebut,
+                ':hfin'   => $heureFin,
+            ]);
         }
     }
 

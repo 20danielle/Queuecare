@@ -210,6 +210,19 @@ class MedecinModel
 
             if ($upd->rowCount() > 0) {
                 $assigned++;
+
+                // Occuper le créneau correspondant dans le planning du
+                // médecin nouvellement affecté (la consultation n'ayant pas
+                // pu réserver de créneau au moment de sa création puisqu'aucun
+                // médecin n'était encore disponible).
+                $stmtHeure = $this->db->prepare(
+                    'SELECT heure_passage_estimee FROM consultations WHERE id = :id'
+                );
+                $stmtHeure->execute([':id' => (int)$consultationId]);
+                $heurePassage = $stmtHeure->fetchColumn();
+                if ($heurePassage) {
+                    $this->reserverCreneauEdt($ssId, $medecinId, $date, $heurePassage);
+                }
             }
         }
 
@@ -497,6 +510,234 @@ class MedecinModel
         return $stmt->execute([':id' => $consultationId]);
     }
 
+    /* ════════════════════════════════════════════════════════
+       BOUTON "URGENCE" (statut disponible/indisponible du médecin)
+       ────────────────────────────────────────────────────────
+       Cas d'usage : le gestionnaire signale, depuis SON dashboard, qu'un
+       médecin de son sous-service est appelé en urgence et doit quitter.
+       Contrairement au report au lendemain (annulerToutesConsultations),
+       sa file du jour n'est PAS perdue : les consultations pas encore
+       prises en charge sont réparties entre les autres médecins
+       disponibles du sous-service (reaffecterFileVersMedecinsDisponibles),
+       et le médecin les récupère automatiquement (restaurerFileMedecin)
+       dès sa prochaine connexion si elles n'ont pas encore été traitées.
+    ════════════════════════════════════════════════════════ */
+
+    /**
+     * Un médecin est considéré "en pleine consultation" uniquement s'il a
+     * une consultation en_cours. Une consultation en_pause (examen
+     * externe) ne compte PAS comme active : dès qu'il la met en pause (ou
+     * la termine), une urgence en attente doit pouvoir s'appliquer
+     * immédiatement (cf. appliquerUrgenceSiEnAttente()).
+     */
+    public function aUneConsultationActive(int $medecinId): bool
+    {
+        $stmt = $this->db->prepare(
+            'SELECT COUNT(*) FROM consultations
+             WHERE medecin_id = :mid AND statut = "en_cours"'
+        );
+        $stmt->execute([':mid' => $medecinId]);
+        return (bool)$stmt->fetchColumn();
+    }
+
+    /**
+     * Déclenche le mode "urgence" pour un médecin, suite au clic du
+     * gestionnaire sur le bouton dédié de SON dashboard (le gestionnaire
+     * signale qu'un médecin de son sous-service est appelé en urgence).
+     * - Si le médecin n'a aucune consultation en_cours (donc aussi s'il
+     *   n'a simplement aucune consultation, ou si elle est déjà en_pause) :
+     *   bascule immédiate en "indisponible" (retour ['immediate' => true])
+     *   + on mémorise qu'une notification doit encore être délivrée à son
+     *   dashboard (potentiellement ouvert dans un autre onglet/session),
+     *   qui devra afficher une alerte puis se déconnecter automatiquement.
+     * - Sinon (consultation en_cours) : on mémorise juste la demande
+     *   (urgence_en_attente = 1) ; la bascule effective aura lieu via
+     *   appliquerUrgenceSiEnAttente() dès que le médecin termine cette
+     *   consultation OU la met simplement en pause (examen externe) — le
+     *   message + la déconnexion sont alors renvoyés directement dans la
+     *   réponse de l'action correspondante (terminerConsultationAjax,
+     *   marquerAbsentAjax ou mettreEnPauseAjax).
+     *
+     * @return array{immediate: bool}
+     */
+    public function declencherUrgenceParGestionnaire(int $medecinId, int $gestionnaireId): array
+    {
+        if ($this->aUneConsultationActive($medecinId)) {
+            $stmt = $this->db->prepare(
+                'UPDATE medecins
+                 SET urgence_en_attente = 1,
+                     urgence_declenchee_par_gestionnaire_id = :gid
+                 WHERE id = :id'
+            );
+            $stmt->execute([':gid' => $gestionnaireId, ':id' => $medecinId]);
+            return ['immediate' => false];
+        }
+
+        $stmt = $this->db->prepare(
+            'UPDATE medecins
+             SET statut = "indisponible",
+                 urgence_en_attente = 0,
+                 urgence_notification_en_attente = 1,
+                 urgence_declenchee_par_gestionnaire_id = :gid
+             WHERE id = :id'
+        );
+        $stmt->execute([':gid' => $gestionnaireId, ':id' => $medecinId]);
+        return ['immediate' => true];
+    }
+
+    /**
+     * À appeler juste après qu'une consultation en_cours soit terminée,
+     * que le patient ait été marqué absent, OU que la consultation soit
+     * simplement mise en pause (examen externe) — les trois événements qui
+     * font sortir le médecin de l'état "en pleine consultation". Si une
+     * urgence était en attente pour ce médecin ET qu'il n'a plus aucune
+     * consultation en_cours, on bascule enfin son statut à "indisponible".
+     *
+     * @return bool true si l'urgence a bien été appliquée — l'appelant
+     *              doit alors déconnecter le médecin — false sinon.
+     */
+    public function appliquerUrgenceSiEnAttente(int $medecinId): bool
+    {
+        $stmt = $this->db->prepare(
+            'SELECT urgence_en_attente FROM medecins WHERE id = :id LIMIT 1'
+        );
+        $stmt->execute([':id' => $medecinId]);
+
+        if (!(bool)$stmt->fetchColumn()) {
+            return false;
+        }
+
+        // Une autre consultation est peut-être passée en_cours entre temps
+        // (ex: reprise d'une pause précédente) : on attend qu'elle se
+        // termine (ou soit mise en pause) elle aussi.
+        if ($this->aUneConsultationActive($medecinId)) {
+            return false;
+        }
+
+        $stmt = $this->db->prepare(
+            'UPDATE medecins SET statut = "indisponible", urgence_en_attente = 0 WHERE id = :id'
+        );
+        $stmt->execute([':id' => $medecinId]);
+        return true;
+    }
+
+    /**
+     * À appeler à chaque connexion réussie d'un médecin au dashboard.
+     * Le simple fait de se reconnecter signifie qu'il est de nouveau
+     * opérationnel : on annule toute urgence en attente et on repasse
+     * son statut à "disponible" (actif).
+     */
+    public function reactiverApresConnexion(int $medecinId): bool
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE medecins
+             SET statut = "disponible",
+                 urgence_en_attente = 0,
+                 urgence_notification_en_attente = 0,
+                 urgence_declenchee_par_gestionnaire_id = NULL
+             WHERE id = :id'
+        );
+        return $stmt->execute([':id' => $medecinId]);
+    }
+
+    /**
+     * Consomme (lit puis efface) le drapeau "notification d'urgence en
+     * attente" d'un médecin. Utilisé par le polling du dashboard médecin
+     * (heartbeat AJAX) pour détecter qu'une urgence a été déclenchée par le
+     * gestionnaire pendant qu'aucune consultation n'était en cours : la
+     * bascule "indisponible" a déjà eu lieu côté serveur, il ne reste plus
+     * qu'à avertir le navigateur du médecin (potentiellement resté ouvert
+     * sur un autre onglet) puis à le déconnecter.
+     *
+     * @return bool true si une notification était bien en attente.
+     */
+    public function consommerNotificationUrgence(int $medecinId): bool
+    {
+        $stmt = $this->db->prepare(
+            'SELECT urgence_notification_en_attente FROM medecins WHERE id = :id LIMIT 1'
+        );
+        $stmt->execute([':id' => $medecinId]);
+
+        if (!(bool)$stmt->fetchColumn()) {
+            return false;
+        }
+
+        $stmt = $this->db->prepare(
+            'UPDATE medecins SET urgence_notification_en_attente = 0 WHERE id = :id'
+        );
+        $stmt->execute([':id' => $medecinId]);
+        return true;
+    }
+
+    /**
+     * À appeler dès qu'un médecin se reconnecte à son dashboard (login).
+     * Restitue au médecin les consultations du jour qui avaient été
+     * réaffectées automatiquement à d'autres médecins pendant son
+     * indisponibilité (urgence), et qui n'ont pas encore été traitées
+     * (toujours "en_attente"/"confirme"). Les consultations déjà prises en
+     * charge par le médecin remplaçant (en_cours/en_pause/traite/absent) ne
+     * sont pas touchées.
+     *
+     * @return int[] Liste des IDs de consultations restituées (permet au
+     *               contrôleur de notifier chaque patient concerné qu'il
+     *               doit revenir vers son médecin initial).
+     */
+    public function restaurerFileMedecin(int $medecinId): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT id, duree_estimee
+             FROM consultations
+             WHERE medecin_id_origine = :mid
+               AND medecin_id != :mid2
+               AND statut IN ("en_attente", "confirme")
+               AND DATE(COALESCE(heure_passage_estimee, heure_emission)) = CURDATE()
+             ORDER BY rang ASC, heure_emission ASC'
+        );
+        $stmt->execute([':mid' => $medecinId, ':mid2' => $medecinId]);
+        $consultations = $stmt->fetchAll();
+
+        if (empty($consultations)) {
+            return [];
+        }
+
+        $stmtRang = $this->db->prepare(
+            'SELECT COALESCE(MAX(rang), 0) FROM consultations
+             WHERE medecin_id = :mid
+               AND DATE(COALESCE(heure_passage_estimee, heure_emission)) = CURDATE()
+               AND statut NOT IN ("annule", "absent")'
+        );
+        $stmtRang->execute([':mid' => $medecinId]);
+        $rangBase = (int)$stmtRang->fetchColumn();
+
+        $stmtUpdate = $this->db->prepare(
+            'UPDATE consultations
+             SET medecin_id = :mid,
+                 medecin_id_origine = NULL,
+                 rang = :rang,
+                 heure_passage_estimee = :heure
+             WHERE id = :id'
+        );
+
+        $aujourdhui = date('Y-m-d') . ' 00:00:00';
+        $restituees = [];
+
+        foreach ($consultations as $i => $c) {
+            $rang  = $rangBase + $i + 1;
+            $duree = (int)($c['duree_estimee'] ?? 1800);
+            $heure = date('Y-m-d H:i:s', strtotime($aujourdhui) + ($rang - 1) * $duree);
+
+            $stmtUpdate->execute([
+                ':mid'   => $medecinId,
+                ':rang'  => $rang,
+                ':heure' => $heure,
+                ':id'    => $c['id'],
+            ]);
+            $restituees[] = (int)$c['id'];
+        }
+
+        return $restituees;
+    }
+
     /**
      * Annule les consultations du jour et les reporte au lendemain,
      * en priorité (rangs 1, 2, 3…) et dans le même ordre qu'aujourd'hui.
@@ -668,18 +909,25 @@ class MedecinModel
                 $duree = (int)($c['duree_estimee'] ?? 1800);
                 $nouvelleHeure = date('Y-m-d H:i:s', strtotime("$date 00:00:00") + ($nouveauRang - 1) * $duree);
 
+                // medecin_id_origine n'est renseigné que s'il ne l'était pas
+                // déjà : en cas de réaffectations en cascade, on veut
+                // toujours pouvoir restituer la file au tout premier
+                // médecin (celui qui était réellement prévu ce jour-là),
+                // pas au médecin intermédiaire.
                 $stmtUpdate = $this->db->prepare(
                     'UPDATE consultations
                      SET medecin_id = :new_mid,
+                         medecin_id_origine = COALESCE(medecin_id_origine, :orig_mid),
                          rang = :rang,
                          heure_passage_estimee = :heure
                      WHERE id = :id'
                 );
                 $stmtUpdate->execute([
-                    ':new_mid' => $nouveauMedecinId,
-                    ':rang'    => $nouveauRang,
-                    ':heure'   => $nouvelleHeure,
-                    ':id'      => $c['id'],
+                    ':new_mid'  => $nouveauMedecinId,
+                    ':orig_mid' => $medecinIndisponibleId,
+                    ':rang'     => $nouveauRang,
+                    ':heure'    => $nouvelleHeure,
+                    ':id'       => $c['id'],
                 ]);
 
                 $reaffectees[] = [
@@ -1177,22 +1425,66 @@ class MedecinModel
         $aff = $this->getSousServiceMedecin($medecinId);
         if (!$aff) return [];
 
-        // Horaires d'ouverture du service
+        return $this->calculerCreneauxDisponibles((int)$aff['ss_id'], $medecinId, $date);
+    }
+
+    /**
+     * Calcule les créneaux disponibles pour un médecin, un sous-service et une
+     * date donnés, en tenant compte de TOUT ce que l'administrateur a configuré
+     * dans son dashboard :
+     *  - horaires d'ouverture / fermeture du service,
+     *  - pause du service (pause_debut / pause_fin) -> créneaux exclus,
+     *  - jours de fermeture du service (jours_fermeture) -> journée exclue,
+     *  - jours de travail du médecin (medecin_jours_travail) -> journée exclue
+     *    si le médecin ne travaille pas ce jour-là,
+     *  - congés du médecin (conges_medecins) -> journée exclue,
+     *  - capacité horaire déjà réservée (consultations existantes).
+     */
+    public function calculerCreneauxDisponibles(int $ssId, int $medecinId, string $date): array
+    {
         $stmt = $this->db->prepare(
             'SELECT s.horaires_ouverture, s.horaires_fermeture, s.pause_debut, s.pause_fin,
-                    ss.capacite_horaire
+                    s.jours_fermeture, ss.capacite_horaire
              FROM sous_services ss
              JOIN services s ON s.id = ss.service_id
              WHERE ss.id = :ss'
         );
-        $stmt->execute([':ss' => $aff['ss_id']]);
+        $stmt->execute([':ss' => $ssId]);
         $svc = $stmt->fetch();
 
         if (!$svc) return [];
 
-        $ouv   = $svc['horaires_ouverture'] ?? '08:00:00';
-        $ferm  = $svc['horaires_fermeture'] ?? '18:00:00';
-        $cap   = (int)($svc['capacite_horaire'] ?? 10);
+        // Jour de la semaine demandé (1 = Lundi ... 7 = Dimanche)
+        $jourSemaine = (int)date('N', strtotime($date));
+
+        // 1) Le service est-il fermé ce jour-là (config admin) ?
+        $joursFermeture = !empty($svc['jours_fermeture']) ? explode(',', $svc['jours_fermeture']) : [];
+        if (in_array((string)$jourSemaine, $joursFermeture, true)) {
+            return [];
+        }
+
+        // 2) Le médecin travaille-t-il ce jour-là (planning admin) ?
+        $joursTravail = $this->getJoursTravailMedecin($medecinId);
+        if (!empty($joursTravail) && !in_array($jourSemaine, array_map('intval', $joursTravail), true)) {
+            return [];
+        }
+
+        // 3) Le médecin est-il en congé à cette date (planning admin) ?
+        $stmtConge = $this->db->prepare(
+            'SELECT id FROM conges_medecins
+             WHERE medecin_id = :mid AND :date BETWEEN date_debut AND date_fin
+             LIMIT 1'
+        );
+        $stmtConge->execute([':mid' => $medecinId, ':date' => $date]);
+        if ($stmtConge->fetch()) {
+            return [];
+        }
+
+        $ouv  = $svc['horaires_ouverture'] ?? '08:00:00';
+        $ferm = $svc['horaires_fermeture'] ?? '18:00:00';
+        $pauD = $svc['pause_debut'] ?? null;
+        $pauF = $svc['pause_fin'] ?? null;
+        $cap  = (int)($svc['capacite_horaire'] ?? 10);
 
         // Compter les consultations déjà prises par heure ce jour-là pour ce médecin
         $stmtOcc = $this->db->prepare(
@@ -1209,11 +1501,18 @@ class MedecinModel
             $occupes[(int)$r['heure']] = (int)$r['nb'];
         }
 
-        $creneaux = [];
-        $hOuv  = (int)date('H', strtotime($ouv));
-        $hFerm = (int)date('H', strtotime($ferm));
+        $creneaux    = [];
+        $hOuv        = (int)date('H', strtotime($ouv));
+        $hFerm       = (int)date('H', strtotime($ferm));
+        $hPauseDebut = $pauD ? (int)date('H', strtotime($pauD)) : null;
+        $hPauseFin   = $pauF ? (int)date('H', strtotime($pauF)) : null;
 
         for ($h = $hOuv; $h < $hFerm; $h++) {
+            // 4) Exclure les heures qui tombent dans la pause configurée par l'admin
+            if ($hPauseDebut !== null && $hPauseFin !== null && $h >= $hPauseDebut && $h < $hPauseFin) {
+                continue;
+            }
+
             $pris = $occupes[$h] ?? 0;
             if ($pris < $cap) {
                 $label = sprintf('%02d:00', $h);
@@ -1226,6 +1525,103 @@ class MedecinModel
         }
 
         return $creneaux;
+    }
+
+    /**
+     * Réserve un rendez-vous en ligne pris directement par le patient depuis
+     * l'application mobile, sur un créneau parmi ceux renvoyés par
+     * getCreneauxDisponibles(). La disponibilité du créneau est revalidée
+     * côté serveur (capacité, pause, jour de fermeture du service, jour de
+     * travail et congés du médecin) pour rester cohérente avec le planning
+     * configuré par l'administrateur, même si la demande ne provient pas
+     * d'un appel préalable à getCreneauxDisponibles().
+     */
+    public function reserverRdvPatient(int $patientId, int $medecinId, string $dateRdv, string $heureRdv, string $motif = ''): array
+    {
+        if ($dateRdv <= date('Y-m-d')) {
+            return ['success' => false, 'rdv_id' => null, 'message' => 'La date doit être dans le futur.'];
+        }
+
+        $aff = $this->getSousServiceMedecin($medecinId);
+        if (!$aff) {
+            return ['success' => false, 'rdv_id' => null, 'message' => 'Médecin introuvable ou non affecté à un service.'];
+        }
+        $ssId = (int)$aff['ss_id'];
+
+        // Revalidation serveur du créneau (planning admin : horaires, pause,
+        // jours de fermeture, jours de travail et congés du médecin).
+        $disponibles = $this->calculerCreneauxDisponibles($ssId, $medecinId, $dateRdv);
+        $heureNormalisee = date('H:00', strtotime($heureRdv));
+        $creneauValide = false;
+        foreach ($disponibles as $c) {
+            if ($c['heure'] === $heureNormalisee) {
+                $creneauValide = true;
+                break;
+            }
+        }
+        if (!$creneauValide) {
+            return ['success' => false, 'rdv_id' => null, 'message' => 'Ce créneau n\'est plus disponible.'];
+        }
+
+        // Un seul RDV actif par patient, par service et par jour
+        $stmt2 = $this->db->prepare(
+            'SELECT id FROM consultations
+             WHERE patient_id      = :pid
+               AND sous_service_id = :ss
+               AND DATE(heure_passage_estimee) = :date
+               AND statut NOT IN ("annule", "absent")'
+        );
+        $stmt2->execute([':pid' => $patientId, ':ss' => $ssId, ':date' => $dateRdv]);
+        if ($stmt2->fetch()) {
+            return ['success' => false, 'rdv_id' => null, 'message' => 'Vous avez déjà un rendez-vous ce jour-là.'];
+        }
+
+        $stmtRang = $this->db->prepare(
+            'SELECT COALESCE(MAX(rang), 0) + 1
+             FROM consultations
+             WHERE sous_service_id = :ss
+               AND DATE(heure_passage_estimee) = :date
+               AND statut NOT IN ("annule", "absent")'
+        );
+        $stmtRang->execute([':ss' => $ssId, ':date' => $dateRdv]);
+        $rang = (int)$stmtRang->fetchColumn();
+
+        $heurePassage = $dateRdv . ' ' . $heureNormalisee . ':00';
+        $dureeEstimee = $this->getDureeEstimeeParSS($ssId);
+        $motifPropre  = !empty($motif) ? htmlspecialchars(trim($motif)) : 'Rendez-vous en ligne';
+
+        $stmtIns = $this->db->prepare(
+            'INSERT INTO consultations
+                (patient_id, sous_service_id, medecin_id, statut, rang, mode_prise,
+                 heure_emission, heure_passage_estimee, duree_estimee, motif)
+             VALUES
+                (:patient_id, :ss, :medecin_id, "confirme", :rang, "LIGNE",
+                 NOW(), :heure, :duree, :motif)'
+        );
+        $stmtIns->execute([
+            ':patient_id' => $patientId,
+            ':ss'         => $ssId,
+            ':medecin_id' => $medecinId,
+            ':rang'       => $rang,
+            ':heure'      => $heurePassage,
+            ':duree'      => $dureeEstimee,
+            ':motif'      => $motifPropre,
+        ]);
+        $rdvId = (int)$this->db->lastInsertId();
+
+        if (!$rdvId) {
+            return ['success' => false, 'rdv_id' => null, 'message' => 'Erreur lors de la création du rendez-vous.'];
+        }
+
+        $this->reserverCreneauEdt($ssId, $medecinId, $dateRdv, $heureNormalisee);
+
+        return [
+            'success'   => true,
+            'rdv_id'    => $rdvId,
+            'message'   => 'Rendez-vous confirmé.',
+            'date_rdv'  => $dateRdv,
+            'heure_rdv' => $heureNormalisee,
+        ];
     }
 
     /**

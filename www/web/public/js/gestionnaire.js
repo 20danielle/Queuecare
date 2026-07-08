@@ -158,7 +158,7 @@ function imprimerQRCode() {
                     <p><strong>${serviceNom}</strong></p>
                     <p>${sousServiceNom}</p>
                     <p>Scannez ce QR code pour prendre votre rendez-vous en ligne</p>
-                    <div class="footer">Généré le ${new Date().toLocaleDateString('fr-FR')} ${new Date().toLocaleTimeString('fr-FR')}</div>
+                    <div class="footer">Généré le ${new Date().toLocaleDateString('fr-FR', { timeZone: 'Africa/Douala' })} ${new Date().toLocaleTimeString('fr-FR', { timeZone: 'Africa/Douala' })}</div>
                 </div>
                 <script>window.print();<\/script>
             </body>

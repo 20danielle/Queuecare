@@ -38,14 +38,17 @@ function annulerToutesConsultations() {
     }
 }
 
-// Horloge en temps réel
+// Horloge en temps réel — toujours affichée en heure de Douala (WAT,
+// UTC+1), explicitement, quel que soit le fuseau horaire configuré sur
+// l'appareil du médecin (évite tout décalage si l'appareil est mal réglé).
 function updateClock() {
     const clockElement = document.getElementById('clock');
     if (clockElement) {
         clockElement.textContent = new Date().toLocaleTimeString('fr-FR', {
             hour: '2-digit',
             minute: '2-digit',
-            second: '2-digit'
+            second: '2-digit',
+            timeZone: 'Africa/Douala'
         });
     }
 }

@@ -93,7 +93,14 @@ class Database
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES   => false,
-                PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci",
+                // Douala (Cameroun) est en WAT, UTC+1 fixe toute l'annee (pas de
+                // changement d'heure). On force le fuseau de la session MySQL a
+                // "+01:00" pour que NOW()/CURDATE()/TIMESTAMPDIFF(...) rendent
+                // exactement l'heure de Douala, quel que soit le fuseau configure
+                // sur le serveur MySQL (souvent UTC par defaut chez les hebergeurs).
+                // Sans cela, les horodatages calcules cote SQL peuvent presenter un
+                // decalage (typiquement 1h) par rapport a ceux calcules cote PHP.
+                PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci, time_zone = '+01:00'",
             ];
 
             try {

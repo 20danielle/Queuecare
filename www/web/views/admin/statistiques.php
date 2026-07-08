@@ -514,7 +514,7 @@ $nomHopitalStat = $hopital['nom_hopital'] ?? 'Hôpital';
     // ── Export PDF ──
     window.admExporterPDF = function() {
         const hopital = <?= json_encode($nomHopitalStat) ?>;
-        const date = new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
+        const date = new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric', timeZone: 'Africa/Douala' });
         const periode = document.querySelector('.btn-per-adm.active')?.textContent || '';
         const tot  = document.getElementById('admTotal')?.textContent || '—';
         const tr   = document.getElementById('admTraitees')?.textContent || '—';

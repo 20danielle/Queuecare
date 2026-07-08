@@ -6,6 +6,10 @@
  * ACCÈS : Médecins et Administrateurs (Directeur)
  */
 
+// Fuseau horaire fixe : Douala (WAT, UTC+1, pas de changement d'heure).
+// Doit être défini avant tout appel à date()/time() dans cette requête.
+date_default_timezone_set('Africa/Douala');
+
 session_start();
 require_once __DIR__ . '/helpers/AuthHelper.php';
 require_once __DIR__ . '/helpers/LangHelper.php';
@@ -129,7 +133,7 @@ switch ($action) {
     case 'annuler_toutes_ajax':
         $ctrl->annulerToutesAjax();
         break;
-    
+
     // Planning
     case 'get_planning_medecin':
         $ctrl->getPlanningMedecin();

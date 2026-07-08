@@ -15,6 +15,7 @@ require_once __DIR__ . '/models/QRCodeModel.php';
 require_once __DIR__ . '/models/TicketModel.php';
 require_once __DIR__ . '/models/GestionnaireModel.php';
 require_once __DIR__ . '/models/ConsultationModel.php';
+require_once __DIR__ . '/helpers/QueueNotificationService.php';
 
 $token  = trim($_GET['token'] ?? '');
 $erreur = '';
@@ -111,6 +112,16 @@ if (!$erreur && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $erreurs['global'] = 'Aucun médecin disponible n\'est affecté à ce service pour le moment. Veuillez vous présenter à l\'accueil.';
             }
         } else {
+            // Notification push : confirmation d'inscription (rang, heure,
+            // médecin). Sans effet si le patient n'a pas encore de token FCM
+            // (cas fréquent pour un patient anonyme créé via QR code).
+            try {
+                $notifSvc = new QueueNotificationService();
+                $notifSvc->onNouvelleConsultation($consultationId);
+            } catch (\Throwable $e) {
+                error_log('[FCM] scan_ticket onNouvelleConsultation: ' . $e->getMessage());
+            }
+
             // Récupérer le rang et le temps d'attente réels de la consultation créée
             $consultationModel = new ConsultationModel();
             $consultationCreee = $consultationModel->findById($consultationId);

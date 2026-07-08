@@ -98,6 +98,13 @@
                 Session expirée après 15 minutes d'inactivité. Veuillez vous reconnecter.
             </div>
             <?php endif; ?>
+
+            <?php if (isset($_GET['urgence']) && $_GET['urgence'] == 1): ?>
+            <div class="alert alert-success">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                Vous avez été déconnecté suite à une urgence. Votre file d'attente a été conservée : reconnectez-vous dès que possible pour redevenir disponible.
+            </div>
+            <?php endif; ?>
             
             <form method="POST" action="medecin.php?action=connexion" id="connexionForm">
                 

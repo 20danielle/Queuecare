@@ -47,6 +47,7 @@ $apiActions = [
     'patient_reset_password', 'patient_consultations', 'patient_tickets',
     'patient_notifications', 'mark_notification_read',
     'mark_all_notifications_read', 'health_check',
+    'patient_services', 'patient_medecins', 'patient_creneaux', 'patient_prendre_rdv',
 ];
 
 // ── Actions Web ──────────────────────────────────────────────────────────────
@@ -131,6 +132,22 @@ if (!empty($action) && in_array($action, $apiActions)) {
         case 'mark_all_notifications_read':
             require_once __DIR__ . '/controllers/PatientController.php';
             (new PatientController())->markAllNotificationsRead();
+            break;
+        case 'patient_services':
+            require_once __DIR__ . '/controllers/PatientController.php';
+            (new PatientController())->getServicesDisponibles();
+            break;
+        case 'patient_medecins':
+            require_once __DIR__ . '/controllers/PatientController.php';
+            (new PatientController())->getMedecinsDisponibles();
+            break;
+        case 'patient_creneaux':
+            require_once __DIR__ . '/controllers/PatientController.php';
+            (new PatientController())->getCreneauxDisponibles();
+            break;
+        case 'patient_prendre_rdv':
+            require_once __DIR__ . '/controllers/PatientController.php';
+            (new PatientController())->prendreRendezVous();
             break;
         case 'health_check':
             echo json_encode([

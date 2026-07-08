@@ -16,6 +16,7 @@
  */
 
 require_once __DIR__ . '/NotificationHelper.php';
+require_once __DIR__ . '/DateHelper.php';
 require_once __DIR__ . '/../models/NotificationModel.php';
 require_once __DIR__ . '/../models/PatientModel.php';
 require_once __DIR__ . '/../models/MedecinModel.php';
@@ -64,25 +65,39 @@ class QueueNotificationService
             $token = $this->patientModel->getTokenFCM((int)$patient['patient_id']);
             if (!$token) continue;
 
-            $rang       = (int)$patient['rang'];
-            $prenom     = $patient['patient_prenom'] ?? 'Patient';
+            $rang        = (int)$patient['rang'];
+            $prenom      = $patient['patient_prenom'] ?? 'Patient';
             $sousService = $terminee['sous_service_nom'] ?? 'consultation';
+
+            // Nouvelle estimation du temps d'attente, calculée sur l'heure de
+            // Douala (fuseau forcé côté PHP et côté session MySQL), pour que
+            // la valeur envoyée au patient soit exacte et sans décalage.
+            $tempsAttenteMin = null;
+            if (!empty($patient['heure_passage_estimee'])) {
+                $tempsAttenteMin = (int)round(
+                    DateHelper::differenceMinutes(DateHelper::now(), $patient['heure_passage_estimee'])
+                );
+                if ($tempsAttenteMin < 0) $tempsAttenteMin = 0;
+            }
+            $attenteTxt = $tempsAttenteMin !== null ? "~{$tempsAttenteMin} min" : 'en cours d\'estimation';
 
             if ($rang === 1) {
                 // Le prochain — il est sur le point d'être appelé
                 $titre  = '🔔 Vous êtes le prochain !';
-                $corps  = "C'est bientôt votre tour en {$sousService}. Tenez-vous prêt(e).";
+                $corps  = "C'est bientôt votre tour en {$sousService}. Temps d'attente estimé : {$attenteTxt}. Tenez-vous prêt(e).";
                 $type   = 'RANG_SUIVANT';
             } else {
-                // Les autres — on leur indique leur nouveau rang
+                // Les autres — on leur indique leur nouveau rang et la nouvelle estimation
                 $titre  = '📊 File d\'attente avancée';
-                $corps  = "Vous êtes maintenant en position {$rang} dans la file de {$sousService}.";
+                $corps  = "Vous êtes maintenant en position {$rang} dans la file de {$sousService}. "
+                        . "Nouvelle estimation d'attente : {$attenteTxt}.";
                 $type   = 'AVANCEMENT';
             }
 
             $data = [
                 'type'            => $type,
                 'rang'            => (string)$rang,
+                'temps_attente_min' => (string)($tempsAttenteMin ?? ''),
                 'consultation_id' => (string)$patient['id'],
                 'url'             => '/patient/dashboard.php',
             ];
@@ -96,6 +111,196 @@ class QueueNotificationService
                 $result['success']
             );
         }
+    }
+
+    /**
+     * Notifie le patient CONCERNÉ que SA consultation vient d'être marquée
+     * "traité(e)" (terminée par le médecin). Distinct de onConsultationTerminee()
+     * ci-dessus, qui ne fait qu'avancer la file des AUTRES patients — cette
+     * méthode notifie la personne dont la consultation vient de se terminer.
+     *
+     * @param int $consultationId ID de la consultation qui vient de se terminer.
+     */
+    public function onConsultationTermineePourPatient(int $consultationId): void
+    {
+        if (!$this->helper->isConfigured()) return;
+
+        $consult = $this->getConsultationDetails($consultationId);
+        if (!$consult) return;
+
+        $token = $this->patientModel->getTokenFCM((int)$consult['patient_id']);
+        if (!$token) return;
+
+        $sousService = $consult['sous_service_nom'] ?? 'consultation';
+        $medecinNom  = trim(($consult['medecin_prenom'] ?? '') . ' ' . ($consult['medecin_nom'] ?? ''));
+        $medecinTxt  = $medecinNom !== '' ? "Dr {$medecinNom}" : 'votre médecin';
+
+        $corps = "Votre consultation en {$sousService} avec {$medecinTxt} est terminée. Merci de votre visite.";
+
+        $result = $this->helper->sendToDevice(
+            $token,
+            '✅ Consultation terminée',
+            $corps,
+            [
+                'type'            => 'CONSULTATION_TERMINEE',
+                'consultation_id' => (string)$consultationId,
+                'url'             => '/patient/dashboard.php',
+            ]
+        );
+
+        $this->persisterNotification(
+            (int)$consult['patient_id'],
+            $consultationId,
+            'CONSULTATION_TERMINEE',
+            $corps,
+            $result['success']
+        );
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       1bis. CONSULTATION DÉMARRÉE
+       → Notifie le patient que le médecin l'a appelé et a démarré sa
+         consultation, avec l'heure de démarrage (Douala, exacte).
+    ═══════════════════════════════════════════════════════════════════ */
+
+    public function onConsultationDemarree(int $consultationId): void
+    {
+        if (!$this->helper->isConfigured()) return;
+
+        $consult = $this->getConsultationDetails($consultationId);
+        if (!$consult) return;
+
+        $token = $this->patientModel->getTokenFCM((int)$consult['patient_id']);
+        if (!$token) return;
+
+        // Heure réelle de démarrage : celle enregistrée en base si déjà
+        // disponible (heure_debut_reelle), sinon l'heure serveur actuelle
+        // (Douala), les deux étant garanties cohérentes grâce au fuseau
+        // forcé côté PHP et côté session MySQL.
+        $stmt = $this->db->prepare('SELECT heure_debut_reelle FROM consultations WHERE id = :id LIMIT 1');
+        $stmt->execute([':id' => $consultationId]);
+        $heureDebutReelle = $stmt->fetchColumn();
+        $heure = $heureDebutReelle ? DateHelper::formatDouala($heureDebutReelle, 'H:i') : DateHelper::formatDouala(DateHelper::now(), 'H:i');
+
+        $medecinNom  = trim(($consult['medecin_prenom'] ?? '') . ' ' . ($consult['medecin_nom'] ?? ''));
+        $medecinTxt  = $medecinNom !== '' ? "Dr {$medecinNom}" : 'Le médecin';
+        $sousService = $consult['sous_service_nom'] ?? 'consultation';
+
+        $corps = "{$medecinTxt} vous reçoit maintenant en {$sousService}. Consultation démarrée à {$heure}.";
+
+        $result = $this->helper->sendToDevice(
+            $token,
+            '🔔 C\'est votre tour !',
+            $corps,
+            [
+                'type'            => 'CONSULTATION_DEMARREE',
+                'heure_debut'     => $heure,
+                'consultation_id' => (string)$consultationId,
+                'url'             => '/patient/dashboard.php',
+            ]
+        );
+
+        $this->persisterNotification(
+            (int)$consult['patient_id'],
+            $consultationId,
+            'CONSULTATION_DEMARREE',
+            $corps,
+            $result['success']
+        );
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       1ter. RETOUR DU MÉDECIN TITULAIRE
+       → Le médecin initial (temporairement indisponible) se reconnecte et
+         récupère sa file : les patients réaffectés temporairement à un
+         autre médecin doivent revenir vers lui. Notifie chaque patient
+         concerné.
+    ═══════════════════════════════════════════════════════════════════ */
+
+    public function onRetourMedecinTitulaire(int $consultationId): void
+    {
+        if (!$this->helper->isConfigured()) return;
+
+        $consult = $this->getConsultationDetails($consultationId);
+        if (!$consult) return;
+
+        $token = $this->patientModel->getTokenFCM((int)$consult['patient_id']);
+        if (!$token) return;
+
+        $medecinNom  = trim(($consult['medecin_prenom'] ?? '') . ' ' . ($consult['medecin_nom'] ?? ''));
+        $medecinTxt  = $medecinNom !== '' ? "Dr {$medecinNom}" : 'votre médecin';
+        $sousService = $consult['sous_service_nom'] ?? 'consultation';
+        $rang        = (int)($consult['rang'] ?? 0);
+        $heure       = $consult['heure_passage_estimee']
+                        ? DateHelper::formatDouala($consult['heure_passage_estimee'], 'H:i')
+                        : 'à estimer';
+
+        $corps = "{$medecinTxt} est de retour et va de nouveau vous recevoir en {$sousService}. "
+               . "Merci de vous rapprocher de son cabinet (position {$rang}, heure estimée {$heure}).";
+
+        $result = $this->helper->sendToDevice(
+            $token,
+            '↩️ Votre médecin est de retour',
+            $corps,
+            [
+                'type'            => 'RETOUR_MEDECIN_TITULAIRE',
+                'rang'            => (string)$rang,
+                'consultation_id' => (string)$consultationId,
+                'url'             => '/patient/dashboard.php',
+            ]
+        );
+
+        $this->persisterNotification(
+            (int)$consult['patient_id'],
+            $consultationId,
+            'RETOUR_MEDECIN_TITULAIRE',
+            $corps,
+            $result['success']
+        );
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       1quater. PROCHAIN RENDEZ-VOUS FIXÉ
+       → Notifie le patient qu'un prochain rendez-vous a été fixé, avec le
+         jour et l'heure (Douala, exacts).
+    ═══════════════════════════════════════════════════════════════════ */
+
+    public function onProchainRdvFixe(int $consultationSourceId, int $rdvConsultationId, string $dateRdv, string $heureRdv): void
+    {
+        if (!$this->helper->isConfigured()) return;
+
+        $consult = $this->getConsultationDetails($consultationSourceId);
+        if (!$consult) return;
+
+        $token = $this->patientModel->getTokenFCM((int)$consult['patient_id']);
+        if (!$token) return;
+
+        $sousService = $consult['sous_service_nom'] ?? 'consultation';
+        $jourFmt     = DateHelper::formatDouala($dateRdv . ' ' . $heureRdv, 'd/m/Y');
+        $heureFmt    = DateHelper::formatDouala($dateRdv . ' ' . $heureRdv, 'H:i');
+
+        $corps = "Un prochain rendez-vous en {$sousService} a été fixé le {$jourFmt} à {$heureFmt}.";
+
+        $result = $this->helper->sendToDevice(
+            $token,
+            '📅 Prochain rendez-vous fixé',
+            $corps,
+            [
+                'type'            => 'PROCHAIN_RDV_FIXE',
+                'date_rdv'        => $jourFmt,
+                'heure_rdv'       => $heureFmt,
+                'consultation_id' => (string)$rdvConsultationId,
+                'url'             => '/patient/dashboard.php',
+            ]
+        );
+
+        $this->persisterNotification(
+            (int)$consult['patient_id'],
+            $rdvConsultationId,
+            'PROCHAIN_RDV_FIXE',
+            $corps,
+            $result['success']
+        );
     }
 
     /* ═══════════════════════════════════════════════════════════════════
@@ -294,11 +499,13 @@ class QueueNotificationService
         $rang        = (int)($consult['rang'] ?? 0);
         $sousService = $consult['sous_service_nom'] ?? 'consultation';
         $heure       = $consult['heure_passage_estimee']
-                        ? date('H:i', strtotime($consult['heure_passage_estimee']))
+                        ? DateHelper::formatDouala($consult['heure_passage_estimee'], 'H:i')
                         : 'à estimer';
+        $medecinNom  = trim(($consult['medecin_prenom'] ?? '') . ' ' . ($consult['medecin_nom'] ?? ''));
+        $medecinTxt  = $medecinNom !== '' ? "Dr {$medecinNom}" : 'un médecin (à assigner)';
 
-        $corps = "Vous êtes enregistré(e) en position {$rang} dans la file de {$sousService}. "
-               . "Heure estimée : {$heure}. Vous serez averti(e) au fil de l'avancement.";
+        $corps = "Vous êtes enregistré(e) en position {$rang} dans la file de {$sousService} avec {$medecinTxt}. "
+               . "Heure de passage estimée : {$heure}. Vous serez averti(e) au fil de l'avancement.";
 
         $result = $this->helper->sendToDevice(
             $token,
@@ -307,6 +514,8 @@ class QueueNotificationService
             [
                 'type'            => 'CONFIRMATION',
                 'rang'            => (string)$rang,
+                'heure'           => $heure,
+                'medecin'         => $medecinTxt,
                 'consultation_id' => (string)$consultationId,
                 'url'             => '/patient/dashboard.php',
             ]

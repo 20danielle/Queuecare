@@ -9,7 +9,9 @@ require_once __DIR__ . '/../models/PatientModel.php';
 require_once __DIR__ . '/../models/ConsultationModel.php';
 require_once __DIR__ . '/../models/NotificationModel.php';
 require_once __DIR__ . '/../models/TicketModel.php';
+require_once __DIR__ . '/../models/MedecinModel.php';
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../helpers/DateHelper.php';
 
 class PatientController
 {
@@ -18,6 +20,7 @@ class PatientController
     private ConsultationModel $consultationModel;
     private NotificationModel $notificationModel;
     private TicketModel $ticketModel;
+    private MedecinModel $medecinModel;
 
     public function __construct()
     {
@@ -26,6 +29,7 @@ class PatientController
         $this->consultationModel = new ConsultationModel();
         $this->notificationModel = new NotificationModel();
         $this->ticketModel = new TicketModel();
+        $this->medecinModel = new MedecinModel();
     }
 
     /* ═══════════════════════════════════════════════════════════
@@ -357,11 +361,12 @@ class PatientController
         
         $consultations = $this->patientModel->getConsultationsPatient($patientId);
         
-        // Formater les dates
+        // Formater les dates : toujours en heure de Douala (WAT, UTC+1),
+        // explicitement, pour garantir l'absence de décalage côté app mobile.
         foreach ($consultations as &$c) {
-            $c['heure_passage_estimee'] = $c['heure_passage_estimee'] ? date('Y-m-d H:i:s', strtotime($c['heure_passage_estimee'])) : null;
-            $c['heure_debut_reelle'] = $c['heure_debut_reelle'] ? date('Y-m-d H:i:s', strtotime($c['heure_debut_reelle'])) : null;
-            $c['heure_fin_reelle'] = $c['heure_fin_reelle'] ? date('Y-m-d H:i:s', strtotime($c['heure_fin_reelle'])) : null;
+            $c['heure_passage_estimee'] = $c['heure_passage_estimee'] ? DateHelper::formatDouala($c['heure_passage_estimee'], 'Y-m-d H:i:s') : null;
+            $c['heure_debut_reelle'] = $c['heure_debut_reelle'] ? DateHelper::formatDouala($c['heure_debut_reelle'], 'Y-m-d H:i:s') : null;
+            $c['heure_fin_reelle'] = $c['heure_fin_reelle'] ? DateHelper::formatDouala($c['heure_fin_reelle'], 'Y-m-d H:i:s') : null;
         }
         
         $this->jsonResponse(true, 'Consultations récupérées', [
@@ -568,5 +573,148 @@ class PatientController
         // TODO: Envoyer email avec lien: https://votre-site.com/reset-password?token=$resetToken
         
         $this->jsonResponse(true, 'Si votre email est enregistré, vous recevrez un lien de réinitialisation');
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       PRISE DE RENDEZ-VOUS EN LIGNE
+    ═══════════════════════════════════════════════════════════ */
+
+    /**
+     * GET /index.php?action=patient_services
+     * Headers: Authorization: Bearer <token>
+     * Liste les services/départements disponibles pour prendre rendez-vous.
+     */
+    public function getServicesDisponibles(): void
+    {
+        if (!$this->getAuthenticatedPatientId()) {
+            $this->jsonResponse(false, 'Non authentifié', [], 401);
+            return;
+        }
+
+        $services = $this->consultationModel->getSousServices();
+
+        $this->jsonResponse(true, 'Services récupérés', [
+            'services' => $services,
+        ]);
+    }
+
+    /**
+     * GET /index.php?action=patient_medecins&sous_service_id=X
+     * Headers: Authorization: Bearer <token>
+     * Liste les médecins d'un service, pour que le patient choisisse à qui
+     * prendre rendez-vous.
+     */
+    public function getMedecinsDisponibles(): void
+    {
+        if (!$this->getAuthenticatedPatientId()) {
+            $this->jsonResponse(false, 'Non authentifié', [], 401);
+            return;
+        }
+
+        $ssId = (int)($_GET['sous_service_id'] ?? 0);
+        if (!$ssId) {
+            $this->jsonResponse(false, 'sous_service_id requis', [], 400);
+            return;
+        }
+
+        $medecins = $this->consultationModel->getTousMedecins($ssId);
+
+        $this->jsonResponse(true, 'Médecins récupérés', [
+            'medecins' => $medecins,
+        ]);
+    }
+
+    /**
+     * GET /index.php?action=patient_creneaux&medecin_id=X&date=YYYY-MM-DD
+     * Headers: Authorization: Bearer <token>
+     *
+     * Retourne les créneaux réellement disponibles pour ce médecin à cette
+     * date, en tenant compte du planning configuré par l'administrateur
+     * (horaires du service, pause, jours de fermeture, jours de travail et
+     * congés du médecin) ainsi que des créneaux déjà réservés.
+     */
+    public function getCreneauxDisponibles(): void
+    {
+        if (!$this->getAuthenticatedPatientId()) {
+            $this->jsonResponse(false, 'Non authentifié', [], 401);
+            return;
+        }
+
+        $medecinId = (int)($_GET['medecin_id'] ?? 0);
+        $date = trim($_GET['date'] ?? '');
+
+        if (!$medecinId) {
+            $this->jsonResponse(false, 'medecin_id requis', [], 400);
+            return;
+        }
+
+        if (!$date || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            $this->jsonResponse(false, 'Date invalide', [], 400);
+            return;
+        }
+
+        if ($date <= date('Y-m-d')) {
+            $this->jsonResponse(true, 'La date doit être dans le futur', ['creneaux' => []]);
+            return;
+        }
+
+        $creneaux = $this->medecinModel->getCreneauxDisponibles($medecinId, $date);
+
+        $this->jsonResponse(true, 'Créneaux récupérés', [
+            'creneaux' => $creneaux,
+        ]);
+    }
+
+    /**
+     * POST /index.php?action=patient_prendre_rdv
+     * Headers: Authorization: Bearer <token>
+     * Body: {"medecin_id": X, "date": "YYYY-MM-DD", "heure": "HH:MM", "motif": "..."}
+     *
+     * Le patient réserve lui-même, depuis l'application mobile, un créneau
+     * parmi ceux renvoyés par patient_creneaux. La disponibilité est revérifiée
+     * côté serveur avant la réservation.
+     */
+    public function prendreRendezVous(): void
+    {
+        $patientId = $this->getAuthenticatedPatientId();
+        if (!$patientId) {
+            $this->jsonResponse(false, 'Non authentifié', [], 401);
+            return;
+        }
+
+        $input = json_decode(file_get_contents('php://input'), true) ?? [];
+
+        $medecinId = (int)($input['medecin_id'] ?? 0);
+        $date = trim($input['date'] ?? '');
+        $heure = trim($input['heure'] ?? '');
+        $motif = trim($input['motif'] ?? '');
+
+        if (!$medecinId || !$date || !$heure) {
+            $this->jsonResponse(false, 'medecin_id, date et heure sont requis', [], 400);
+            return;
+        }
+
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            $this->jsonResponse(false, 'Date invalide', [], 400);
+            return;
+        }
+
+        if (!preg_match('/^\d{2}:\d{2}$/', $heure)) {
+            $this->jsonResponse(false, 'Heure invalide', [], 400);
+            return;
+        }
+
+        $resultat = $this->medecinModel->reserverRdvPatient($patientId, $medecinId, $date, $heure, $motif);
+
+        if (!$resultat['success']) {
+            $this->jsonResponse(false, $resultat['message'], [], 409);
+            return;
+        }
+
+        $this->jsonResponse(true, $resultat['message'], [
+            'rdv_id'    => $resultat['rdv_id'],
+            'date_rdv'  => $resultat['date_rdv'],
+            'heure_rdv' => $resultat['heure_rdv'],
+        ]);
     }
 }

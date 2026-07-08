@@ -400,6 +400,85 @@ class GestionnaireController
             exit;
         }
 
+        // Action: Bouton "Urgence" du dashboard gestionnaire — le
+        // gestionnaire signale qu'un médecin de son sous-service est
+        // appelé en urgence et doit quitter.
+        // - Si le médecin a une consultation en cours/en pause : la
+        //   bascule "indisponible" + déconnexion sont différées jusqu'à la
+        //   fin de cette consultation (gérées médecin.php côté médecin) ;
+        //   la file d'attente est immédiatement avertie par notification
+        //   push que le médecin est indisponible (elle ne bouge donc pas
+        //   pour l'instant).
+        // - Sinon : bascule et déconnexion immédiates, et la file du
+        //   médecin (pas encore prise en charge) est aussitôt répartie de
+        //   façon égale entre les autres médecins disponibles du
+        //   sous-service (s'il y en a).
+        // Dans les deux cas, si le médecin revient et que sa file (ou le
+        // reste) n'a pas encore été traitée, elle lui revient
+        // automatiquement dès sa reconnexion (MedecinController::traiterConnexion).
+        if ($action === 'declencher_urgence_medecin') {
+            $medecinId = (int)($_POST['medecin_id'] ?? 0);
+
+            if ($medecinId <= 0) {
+                echo json_encode(['success' => false, 'message' => 'Médecin invalide.']);
+                exit;
+            }
+
+            // Le médecin ciblé doit bien appartenir au sous-service du gestionnaire.
+            $affectation = $this->medecinModel->getSousServiceMedecin($medecinId);
+            if (!$affectation || (int)$affectation['ss_id'] !== (int)$ssId) {
+                echo json_encode(['success' => false, 'message' => 'Ce médecin n\'appartient pas à votre sous-service.']);
+                exit;
+            }
+
+            $gestionnaireId = (int)$_SESSION['gestionnaire_id'];
+            $resultat = $this->medecinModel->declencherUrgenceParGestionnaire($medecinId, $gestionnaireId);
+
+            // Avertir immédiatement la file d'attente du médecin : elle ne
+            // bouge pas pour le moment, qu'une consultation soit en cours
+            // ou non.
+            try {
+                $notifSvc = new QueueNotificationService();
+                $notifSvc->onUrgenceOuReport(
+                    $ssId,
+                    "Le médecin en charge de votre consultation a été appelé en urgence et est momentanément indisponible. Merci de patienter, vous serez tenu(e) informé(e)."
+                );
+            } catch (\Throwable $e) {
+                error_log('[FCM] declencher_urgence_medecin (file avertie): ' . $e->getMessage());
+            }
+
+            if ($resultat['immediate']) {
+                // Aucune consultation en cours : bascule immédiate, on
+                // répartit tout de suite la file non prise en charge entre
+                // les autres médecins disponibles du sous-service.
+                $reaffectation = $this->medecinModel->reaffecterFileVersMedecinsDisponibles($medecinId, (int)$ssId);
+                try {
+                    $notifSvc = new QueueNotificationService();
+                    $notifSvc->onReaffectationMedecin($reaffectation);
+                } catch (\Throwable $e) {
+                    error_log('[FCM] declencher_urgence_medecin (réaffectation): ' . $e->getMessage());
+                }
+
+                echo json_encode([
+                    'success'       => true,
+                    'immediate'     => true,
+                    'reaffectees'   => count($reaffectation['reaffectees']),
+                    'sans_solution' => count($reaffectation['sans_solution']),
+                    'message'       => 'Médecin placé en indisponibilité et déconnecté. '
+                                      . count($reaffectation['reaffectees']) . ' patient(s) réaffecté(s), '
+                                      . count($reaffectation['sans_solution']) . ' en attente d\'une solution.',
+                ]);
+                exit;
+            }
+
+            echo json_encode([
+                'success'   => true,
+                'immediate' => false,
+                'message'   => 'Urgence enregistrée : le médecin sera automatiquement placé en indisponibilité et déconnecté dès la fin de sa consultation en cours. Sa file sera alors réaffectée si besoin.',
+            ]);
+            exit;
+        }
+
         // Action: Signaler au médecin que le patient est revenu d'examen
         // (cloche) — ne change PAS le statut, le médecin reprend lui-même.
         if ($action === 'signaler_retour_patient') {
@@ -451,6 +530,12 @@ class GestionnaireController
                     ]);
 
                     if ($consultId > 0) {
+                        try {
+                            $notifSvc = new QueueNotificationService();
+                            $notifSvc->onNouvelleConsultation($consultId);
+                        } catch (\Throwable $e) {
+                            error_log('[FCM] consultation_manuelle: ' . $e->getMessage());
+                        }
                         echo json_encode(['success' => true, 'message' => "Consultation enregistrée — {$patPrenom} {$patNom}."]);
                         exit;
                     } else {
@@ -523,12 +608,15 @@ class GestionnaireController
             $c['priorite_retour'] = (int)($c['priorite_retour'] ?? 0);
         }
         unset($c);
-        
+
+        $medecins = $this->model->getMedecinsDisponibles($ssId);
+
         echo json_encode([
             'success'       => true,
             'stats'         => $stats,
             'file'          => $file,
-            'consultations' => $consultations
+            'consultations' => $consultations,
+            'medecins'      => $medecins,
         ]);
         exit;
     }
@@ -720,7 +808,22 @@ class GestionnaireController
         $ssId = $sousService['id'];
         $date = $_GET['date'] ?? date('Y-m-d');
         $filtreMemdecinId = isset($_GET['medecin_id']) && is_numeric($_GET['medecin_id']) ? (int)$_GET['medecin_id'] : null;
-        
+
+        // Charger les consultations sur toute la semaine (lundi → dimanche)
+        $dateFin = date('Y-m-d', strtotime($date . ' +6 days'));
+
+        // Réaffecte les consultations encore sans médecin (medecin_id NULL) sur
+        // toute la semaine affichée : sans cela, une consultation créée avant
+        // qu'un médecin ne soit "disponible" (sur place, QR code, en ligne)
+        // reste invisible dans ce planning, notamment dès qu'un filtre médecin
+        // est appliqué.
+        $dateCourante = new DateTimeImmutable($date);
+        $dateLimite = new DateTimeImmutable($dateFin);
+        while ($dateCourante <= $dateLimite) {
+            $this->model->affecterConsultationsSansMedecinDuJour($ssId, $dateCourante->format('Y-m-d'));
+            $dateCourante = $dateCourante->modify('+1 day');
+        }
+
         $tousMedecins = $this->model->getMedecinsDisponibles($ssId);
         
         // Si un médecin est sélectionné, on filtre la liste
@@ -728,8 +831,6 @@ class GestionnaireController
             ? array_values(array_filter($tousMedecins, fn($m) => (int)$m['id'] === $filtreMemdecinId))
             : $tousMedecins;
         
-        // Charger les consultations sur toute la semaine (lundi → dimanche)
-        $dateFin = date('Y-m-d', strtotime($date . ' +6 days'));
         $consultationsRaw = $this->model->consultationsParPeriode($ssId, $date, $dateFin);
 
         $consultations = [];

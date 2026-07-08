@@ -6,6 +6,10 @@
  * ACCÈS : UNIQUEMENT les gestionnaires (ni médecin, ni admin)
  */
 
+// Fuseau horaire fixe : Douala (WAT, UTC+1, pas de changement d'heure).
+// Doit être défini avant tout appel à date()/time() dans cette requête.
+date_default_timezone_set('Africa/Douala');
+
 // Configuration PHP en tout premier (avant tout output)
 error_reporting(E_ALL);
 ini_set('display_errors', 0);

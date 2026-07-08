@@ -18,13 +18,18 @@
  * notifications push inutiles aux patients.
  *
  * Configuration cron (crontab -e) :
- *   */10 * * * * php /chemin/vers/projet/cron/detection_retard_medecin.php >> /var/log/queuecare_cron.log 2>&1
+ *   0,10,20,30,40,50 * * * * php /chemin/vers/projet/cron/detection_retard_medecin.php >> /var/log/queuecare_cron.log 2>&1
  *
  * Appel HTTP possible (protégé par secret) :
  *   GET /cron/detection_retard_medecin.php?secret=VOTRE_SECRET
  */
 
 define('ROOT', dirname(__DIR__));
+
+// Fuseau horaire fixe : Douala (WAT, UTC+1, pas de changement d'heure).
+// Doit être défini avant tout appel à date()/time() dans ce script (les
+// crons n'ont pas de php.ini web et peuvent démarrer en UTC par défaut).
+date_default_timezone_set('Africa/Douala');
 
 if (php_sapi_name() !== 'cli') {
     $secret = getenv('CRON_SECRET') ?: 'changeme_secret_cron';

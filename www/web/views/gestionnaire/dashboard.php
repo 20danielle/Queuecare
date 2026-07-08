@@ -355,6 +355,24 @@ unset($_SESSION['type_message']);
             <!-- Section File d'attente -->
             <div id="section-file" class="section">
                 <div class="section-header"><span class="section-title"><i class="fa-solid fa-list-ol"></i> <?= __('queue') ?></span><span id="fileCount" class="badge badge-green"><?= count($file) ?> <?= __('patient_s') ?></span></div>
+
+                <!-- Panneau "Urgence" : appeler un médecin disponible en urgence -->
+                <div style="margin-bottom:16px;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;">
+                    <div style="font-size:.82rem;font-weight:700;color:#0a2b5e;margin-bottom:10px;"><i class="fa-solid fa-user-doctor" style="margin-right:6px;color:#1a4db5;"></i><?= __('urgency_panel_title') ?></div>
+                    <div id="medecinsUrgenceList" style="display:flex;gap:10px;flex-wrap:wrap;">
+                        <?php if (empty($medecins)): ?>
+                        <div class="empty-state" style="padding:8px;"><?= __('urgency_no_doctor_available') ?></div>
+                        <?php else: foreach ($medecins as $m): ?>
+                        <div class="medecin-urgence-card" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;">
+                            <span style="font-weight:600;color:#0a2b5e;"><?= htmlspecialchars($m['prenom'] . ' ' . $m['nom']) ?></span>
+                            <span class="badge badge-green"><?= __('status_available') ?></span>
+                            <span style="font-size:.78rem;color:#64748b;">(<?= (int)$m['nb_en_attente'] ?> <?= __('waiting_short') ?>)</span>
+                            <button class="btn-sm btn-sm-danger" onclick="declencherUrgenceMedecin(<?= (int)$m['id'] ?>, '<?= htmlspecialchars(addslashes($m['prenom'] . ' ' . $m['nom']), ENT_QUOTES) ?>')" title="<?= __('urgency_btn_title_gestionnaire') ?>"><i class="fa-solid fa-truck-medical"></i> <?= __('urgency_btn') ?></button>
+                        </div>
+                        <?php endforeach; endif; ?>
+                    </div>
+                </div>
+
                 <div id="medecinFilterBar" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;"></div>
                 <div id="filePills" class="statut-pills"></div>
                 <div id="fileContent">
@@ -733,6 +751,7 @@ unset($_SESSION['type_message']);
                     if(currentSection==='file'){ mettreAJourFileAttente(d.file, !!auto); const fc=document.getElementById('fileCount'); if(fc) fc.innerHTML=`${d.file.length} patient(s)`; }
                     if(currentSection==='consultations'){ mettreAJourConsultations(d.consultations, !!auto); const cc=document.getElementById('consultationsCount'); if(cc) cc.innerHTML=d.consultations.length; }
                     mettreAJourStatistiques(d.stats);
+                    renderMedecinsUrgencePanel(d.medecins);
                 } else {
                     console.warn('[DEBUG] get_dashboard_data a renvoyé success=false :', d.message || d);
                 }
@@ -1364,6 +1383,39 @@ unset($_SESSION['type_message']);
             }).catch(()=>afficherMessage(t('network_error_short'),'error'));
     }
 
+    // ── Panneau "Urgence" (appeler un médecin disponible en urgence) ──
+    function renderMedecinsUrgencePanel(medecins) {
+        const el = document.getElementById('medecinsUrgenceList');
+        if(!el) return;
+        if(!medecins || medecins.length === 0) {
+            el.innerHTML = '<div class="empty-state" style="padding:8px;">Aucun médecin disponible actuellement.</div>';
+            return;
+        }
+        el.innerHTML = medecins.map(m => {
+            const nomComplet = `${m.prenom} ${m.nom}`;
+            const nomEchappe = escapeHtml(nomComplet).replace(/'/g, "\\'");
+            return `<div class="medecin-urgence-card" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;">
+                <span style="font-weight:600;color:#0a2b5e;">${escapeHtml(nomComplet)}</span>
+                <span class="badge badge-green">Disponible</span>
+                <span style="font-size:.78rem;color:#64748b;">(${m.nb_en_attente || 0} en attente)</span>
+                <button class="btn-sm btn-sm-danger" onclick="declencherUrgenceMedecin(${m.id}, '${nomEchappe}')"><i class="fa-solid fa-truck-medical"></i> Urgence</button>
+            </div>`;
+        }).join('');
+    }
+
+    function declencherUrgenceMedecin(medecinId, nomMedecin) {
+        if(!confirm(`⚠️ Déclencher une urgence pour Dr ${nomMedecin} ?\n\nS'il a une consultation en cours, la bascule sera différée jusqu'à sa fin (la file est avertie dès maintenant). Sinon il sera immédiatement déconnecté et sa file du jour non encore prise en charge sera répartie entre les autres médecins disponibles du sous-service.\n\nS'il revient avant que sa file ne soit traitée, elle lui reviendra automatiquement dès sa reconnexion.`)) return;
+
+        const fd = new FormData();
+        fd.append('action', 'declencher_urgence_medecin');
+        fd.append('medecin_id', medecinId);
+        fetch('gestionnaire.php?action=traiter_action_ajax', { method:'POST', body:fd, headers:{'X-Requested-With':'XMLHttpRequest'} })
+            .then(r=>r.json()).then(d=>{
+                if(d.success) { afficherMessage(d.message, 'success'); rafraichirDonnees(); }
+                else afficherMessage(d.message || t('generic_error'), 'error');
+            }).catch(()=>afficherMessage(t('network_error_short'), 'error'));
+    }
+
     function soumettreActionG(id, statut) {
         const fd = new FormData();
         fd.append('action', 'maj_statut');
@@ -1595,7 +1647,7 @@ unset($_SESSION['type_message']);
             </tr></thead>
             <tbody>${rows_html}</tbody>
         </table>
-        <div class="total">${t('report_total_footer').replace('%n', rows.length).replace('%d', new Date().toLocaleDateString(LOCALE)).replace('%t', new Date().toLocaleTimeString(LOCALE))}</div>
+        <div class="total">${t('report_total_footer').replace('%n', rows.length).replace('%d', new Date().toLocaleDateString(LOCALE, { timeZone: 'Africa/Douala' })).replace('%t', new Date().toLocaleTimeString(LOCALE, { timeZone: 'Africa/Douala' }))}</div>
         </body></html>`;
     }
 
@@ -1817,46 +1869,47 @@ unset($_SESSION['type_message']);
 
                 html+=`<div class="${slotClass}">`;
 
-                if(estFerme || allOff){
+                const key=dateStr+'|'+heure;
+                const cons=(consIndex[key]||[]);
+
+                if(cons.length>0){
+                    // Une consultation réellement enregistrée doit toujours être
+                    // visible, même si le créneau est par ailleurs marqué "fermé"
+                    // ou "pause" (ex: décalage horaire de la pause après coup).
+                    const wrap = cons.length>1 ? '<div class="gcal-multi">' : '';
+                    const wrapEnd = cons.length>1 ? '</div>' : '';
+                    html+=wrap;
+                    cons.forEach(c=>{
+                        const evCls=c.statut==='en_cours'?'ev-cours':(c.statut==='traite'?'ev-traite':(c.statut==='en_pause'?'ev-pause':'ev-attente'));
+                        const badge=c.statut==='en_cours'?'En cours':(c.statut==='traite'?'Traité':(c.statut==='en_pause'?'En pause':'Prog.'));
+                        const hDebut = c.heure_debut || heure;
+                        const hFin   = c.heure_fin   || '';
+                        const plage  = hFin ? `${hDebut}–${hFin}` : hDebut;
+                        const medLabel = !filtreMedecinId && c.medecin_nom ? `<span style="font-size:.56rem;opacity:.7;">Dr. ${escapeHtml((c.medecin_nom||'').split(' ')[0])}</span>` : '';
+                        html+=`<div class="gcal-event ${evCls}" title="${escapeHtml(c.patient_nom)} ${escapeHtml(c.patient_prenom)} — ${escapeHtml(c.medecin_nom||'')} | ${plage}">
+                            <span class="gcal-event-time">${plage}</span>
+                            <span class="gcal-event-name">${escapeHtml(c.patient_nom)} ${escapeHtml((c.patient_prenom||'')[0]||'')}.</span>
+                            ${medLabel}
+                            <span class="gcal-event-badge">${badge}</span>
+                        </div>`;
+                    });
+                    html+=wrapEnd;
+                } else if(estFerme || allOff){
                     html+=`<div class="gcal-slot-empty" style="font-size:.62rem;color:#cbd5e1;"><i class="fa-solid fa-moon"></i></div>`;
                 } else if(isPause){
                     html+=`<div class="gcal-event ev-pause" style="justify-content:center;"><span class="gcal-event-time"><i class="fa-solid fa-utensils"></i> Pause</span></div>`;
                 } else {
-                    const key=dateStr+'|'+heure;
-                    const cons=(consIndex[key]||[]);
-                    if(cons.length>0){
-                        // Si plusieurs consultations dans le même créneau → empilement compact
-                        const wrap = cons.length>1 ? '<div class="gcal-multi">' : '';
-                        const wrapEnd = cons.length>1 ? '</div>' : '';
-                        html+=wrap;
-                        cons.forEach(c=>{
-                            const evCls=c.statut==='en_cours'?'ev-cours':(c.statut==='traite'?'ev-traite':(c.statut==='en_pause'?'ev-pause':'ev-attente'));
-                            const badge=c.statut==='en_cours'?'En cours':(c.statut==='traite'?'Traité':(c.statut==='en_pause'?'En pause':'Prog.'));
-                            const hDebut = c.heure_debut || heure;
-                            const hFin   = c.heure_fin   || '';
-                            const plage  = hFin ? `${hDebut}–${hFin}` : hDebut;
-                            const medLabel = !filtreMedecinId && c.medecin_nom ? `<span style="font-size:.56rem;opacity:.7;">Dr. ${escapeHtml((c.medecin_nom||'').split(' ')[0])}</span>` : '';
-                            html+=`<div class="gcal-event ${evCls}" title="${escapeHtml(c.patient_nom)} ${escapeHtml(c.patient_prenom)} — ${escapeHtml(c.medecin_nom||'')} | ${plage}">
-                                <span class="gcal-event-time">${plage}</span>
-                                <span class="gcal-event-name">${escapeHtml(c.patient_nom)} ${escapeHtml((c.patient_prenom||'')[0]||'')}.</span>
-                                ${medLabel}
-                                <span class="gcal-event-badge">${badge}</span>
-                            </div>`;
-                        });
-                        html+=wrapEnd;
-                    } else {
-                        // Vérifier disponibilité plage horaire
-                        let isDispo=false;
-                        if(data.plages_horaire){
-                            for(const med of medecinsAffiches){
-                                const pl=data.plages_horaire[med.id]||[];
-                                for(const pg of pl){ if(pg.jour===dateStr&&heure>=pg.heure_debut&&heure<pg.heure_fin){isDispo=true;break;} }
-                                if(isDispo) break;
-                            }
+                    // Vérifier disponibilité plage horaire
+                    let isDispo=false;
+                    if(data.plages_horaire){
+                        for(const med of medecinsAffiches){
+                            const pl=data.plages_horaire[med.id]||[];
+                            for(const pg of pl){ if(pg.jour===dateStr&&heure>=pg.heure_debut&&heure<pg.heure_fin){isDispo=true;break;} }
+                            if(isDispo) break;
                         }
-                        if(isDispo){
-                            html+=`<div class="gcal-slot-empty" style="font-size:.58rem;color:#a78bfa;"><i class="fa-regular fa-circle-check"></i></div>`;
-                        }
+                    }
+                    if(isDispo){
+                        html+=`<div class="gcal-slot-empty" style="font-size:.58rem;color:#a78bfa;"><i class="fa-regular fa-circle-check"></i></div>`;
                     }
                 }
                 html+='</div>';
