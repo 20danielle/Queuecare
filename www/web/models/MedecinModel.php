@@ -13,7 +13,7 @@ class MedecinModel
     public function __construct()
     {
         $this->db = Database::getInstance()->getConnection();
-        $this->ensureUrgenceColumns();
+        $this->ensureSchemaColumns();
     }
 
     /**
@@ -23,7 +23,7 @@ class MedecinModel
      * d'urgence si elles n'existent pas encore afin d'éviter un crash au login
      * médecin.
      */
-    private function ensureUrgenceColumns(): void
+    private function ensureSchemaColumns(): void
     {
         $colonnes = [
             'urgence_en_attente' => [
@@ -34,6 +34,9 @@ class MedecinModel
             ],
             'urgence_declenchee_par_gestionnaire_id' => [
                 'sql' => "ALTER TABLE medecins ADD COLUMN urgence_declenchee_par_gestionnaire_id INT NULL DEFAULT NULL AFTER urgence_notification_en_attente",
+            ],
+            'derniere_connexion_dashboard' => [
+                'sql' => "ALTER TABLE medecins ADD COLUMN derniere_connexion_dashboard DATETIME NULL DEFAULT NULL AFTER created_at",
             ],
         ];
 
