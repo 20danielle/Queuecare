@@ -732,6 +732,42 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
     function t(key) { return I18N[key] || key; }
     const LOCALE = '<?= \LangHelper::getLang() === "en" ? "en-US" : "fr-FR" ?>';
 
+    let _queuecareAudioCtx = null;
+    function jouerAlerteNotification() {
+        try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) return;
+            _queuecareAudioCtx = _queuecareAudioCtx || new AudioContextClass();
+            if (_queuecareAudioCtx.state === 'suspended') _queuecareAudioCtx.resume();
+            const now = _queuecareAudioCtx.currentTime;
+            [0, 0.18].forEach((offset) => {
+                const osc = _queuecareAudioCtx.createOscillator();
+                const gain = _queuecareAudioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = 880;
+                gain.gain.setValueAtTime(0.0001, now + offset);
+                gain.gain.exponentialRampToValueAtTime(0.18, now + offset + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.16);
+                osc.connect(gain);
+                gain.connect(_queuecareAudioCtx.destination);
+                osc.start(now + offset);
+                osc.stop(now + offset + 0.17);
+            });
+        } catch (e) {
+            console.warn('Alerte sonore indisponible:', e);
+        }
+    }
+
+    ['click', 'keydown', 'touchstart'].forEach((eventName) => {
+        document.addEventListener(eventName, () => {
+            try {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                _queuecareAudioCtx = _queuecareAudioCtx || (AudioContextClass ? new AudioContextClass() : null);
+                if (_queuecareAudioCtx && _queuecareAudioCtx.state === 'suspended') _queuecareAudioCtx.resume();
+            } catch (e) {}
+        }, { once: true, passive: true });
+    });
+
     let currentSection = 'consultations', isRefreshing = false, isRefreshingStats = false, planningOffset = 0;
     let _medConsultStatutFilter = null; // null = tous
     let _histStatutFilterMed = ''; // '' = tous
@@ -769,6 +805,7 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
                 // n'était en cours au moment du clic) : on avertit le médecin
                 // puis on le déconnecte automatiquement de son dashboard.
                 if (d.force_logout) {
+                    jouerAlerteNotification();
                     alert(d.message || 'Vous avez été placé en indisponibilité par le gestionnaire (urgence).');
                     window.location.href = d.redirect || 'medecin.php?action=connexion&urgence=1';
                     return;
@@ -802,6 +839,8 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
     }
     
     function mettreAJourConsultations(cons, preservePage) {
+        const anciens = new Set((_consultationsDataMed || []).map(c => `${c.id}:${c.statut}:${c.rang || ''}`));
+        const doitSonner = !!preservePage && (cons || []).some(c => !anciens.has(`${c.id}:${c.statut}:${c.rang || ''}`));
         const statutOrdreMed = {en_cours:0,en_pause:1,confirme:2,en_attente:3,traite:4,absent:5,annule:6};
         (cons||[]).sort((a,b)=>{
             const oa = statutOrdreMed[a.statut]??99, ob = statutOrdreMed[b.statut]??99;
@@ -813,6 +852,7 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
         renderMedConsultsPills();
         if(!preservePage) _consultPageMed = 1;
         afficherConsultationsMed(_getMedConsultsFiltrees(), false);
+        if (doitSonner) jouerAlerteNotification();
     }
 
     function renderMedConsultsPills() {

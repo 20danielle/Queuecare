@@ -43,11 +43,13 @@ class AuthController {
         $user = $utilisateurModel->authentifier($email, $password);
 
         if ($user) {
+            $sessionToken = $utilisateurModel->ouvrirSessionUnique((int)$user['id']);
             $_SESSION['user_id']       = $user['id'];
             $_SESSION['user_email']    = $user['email'];
             $_SESSION['user_nom']      = $user['nom'] ?? $user['email'];
             $_SESSION['role']          = $user['role'];
             $_SESSION['last_activity'] = time();
+            $_SESSION['active_session_token'] = $sessionToken;
 
             if (!empty($user['medecin_id'])) {
                 $_SESSION['medecin_id'] = $user['medecin_id'];
@@ -145,11 +147,13 @@ class AuthController {
         $hopitalModel->sauvegarder(['nom_hopital' => $nomHopital]);
 
         // Connexion automatique
+        $sessionToken = $utilisateurModel->ouvrirSessionUnique((int)$adminId);
         $_SESSION['user_id']       = $adminId;
         $_SESSION['user_email']    = $email;
         $_SESSION['user_nom']      = $nom;
         $_SESSION['role']          = 'admin';
         $_SESSION['last_activity'] = time();
+        $_SESSION['active_session_token'] = $sessionToken;
 
         // Sauvegarder la langue choisie
         $utilisateurModel->mettreAJourLangue($adminId, $langue);
@@ -297,11 +301,13 @@ class AuthController {
         }
 
         // Connexion de l'utilisateur, comme un login classique
+        $sessionToken = $utilisateurModel->ouvrirSessionUnique((int)$user['id']);
         $_SESSION['user_id']       = $user['id'];
         $_SESSION['user_email']    = $user['email'];
         $_SESSION['user_nom']      = $user['nom'] ?? $user['email'];
         $_SESSION['role']          = $user['role'];
         $_SESSION['last_activity'] = time();
+        $_SESSION['active_session_token'] = $sessionToken;
 
         if (!empty($user['medecin_id'])) {
             $_SESSION['medecin_id'] = $user['medecin_id'];

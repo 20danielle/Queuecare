@@ -142,12 +142,31 @@ class AuthHelper {
                 return false;
             }
         }
+
+        if (isset($_SESSION['user_id'], $_SESSION['active_session_token'])) {
+            require_once __DIR__ . '/../models/UtilisateurModel.php';
+            $utilisateurModel = new UtilisateurModel();
+            if (!$utilisateurModel->sessionTokenValide((int)$_SESSION['user_id'], (string)$_SESSION['active_session_token'])) {
+                self::deconnecter();
+                if ($redirectUrl) {
+                    $separator = str_contains($redirectUrl, '?') ? '&' : '?';
+                    header('Location: ' . $redirectUrl . $separator . 'session_remplacee=1');
+                    exit;
+                }
+                return false;
+            }
+        }
+
         $_SESSION['last_activity'] = time();
         return true;
     }
 
     public static function deconnecter(): void {
         self::initSession();
+        if (isset($_SESSION['user_id'], $_SESSION['active_session_token'])) {
+            require_once __DIR__ . '/../models/UtilisateurModel.php';
+            (new UtilisateurModel())->fermerSessionUnique((int)$_SESSION['user_id'], (string)$_SESSION['active_session_token']);
+        }
         $_SESSION = [];
         if (isset($_COOKIE[session_name()])) {
             setcookie(session_name(), '', time() - 3600, '/');

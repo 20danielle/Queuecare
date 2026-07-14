@@ -10,6 +10,27 @@ class UtilisateurModel {
 
     public function __construct() {
         $this->db = Database::getInstance()->getConnection();
+        $this->ensureActiveSessionColumns();
+    }
+
+    private function ensureActiveSessionColumns(): void {
+        $columns = [
+            'active_session_token' => "ALTER TABLE utilisateurs ADD COLUMN active_session_token VARCHAR(128) NULL AFTER derniere_connexion",
+            'active_session_at' => "ALTER TABLE utilisateurs ADD COLUMN active_session_at DATETIME NULL AFTER active_session_token",
+        ];
+
+        foreach ($columns as $column => $sql) {
+            $stmt = $this->db->prepare(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE()
+                   AND TABLE_NAME = 'utilisateurs'
+                   AND COLUMN_NAME = :column"
+            );
+            $stmt->execute([':column' => $column]);
+            if ((int)$stmt->fetchColumn() === 0) {
+                $this->db->exec($sql);
+            }
+        }
     }
 
     /**
@@ -208,6 +229,41 @@ class UtilisateurModel {
         $sql = "UPDATE utilisateurs SET derniere_connexion = NOW() WHERE id = :id";
         $stmt = $this->db->prepare($sql);
         return $stmt->execute([':id' => $id]);
+    }
+
+    public function ouvrirSessionUnique(int $id): string {
+        $token = bin2hex(random_bytes(32));
+        $stmt = $this->db->prepare(
+            "UPDATE utilisateurs
+             SET active_session_token = :token, active_session_at = NOW(), derniere_connexion = NOW()
+             WHERE id = :id"
+        );
+        $stmt->execute([':token' => $token, ':id' => $id]);
+        return $token;
+    }
+
+    public function sessionTokenValide(int $id, string $token): bool {
+        if ($token === '') return false;
+        $stmt = $this->db->prepare(
+            "SELECT COUNT(*)
+             FROM utilisateurs
+             WHERE id = :id
+               AND statut = 'actif'
+               AND active_session_token = :token"
+        );
+        $stmt->execute([':id' => $id, ':token' => $token]);
+        return (int)$stmt->fetchColumn() > 0;
+    }
+
+    public function fermerSessionUnique(int $id, ?string $token = null): void {
+        $sql = "UPDATE utilisateurs SET active_session_token = NULL, active_session_at = NULL WHERE id = :id";
+        $params = [':id' => $id];
+        if ($token !== null && $token !== '') {
+            $sql .= " AND active_session_token = :token";
+            $params[':token'] = $token;
+        }
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
     }
 
     public function mettreAJourLangue(int $id, string $langue): bool {

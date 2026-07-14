@@ -158,6 +158,7 @@ class GestionnaireController
         // 3. Connecter automatiquement
         AuthHelper::connecterGestionnaire($gestionnaireId, $nom, $email);
         $_SESSION['user_id'] = $userId;
+        $_SESSION['active_session_token'] = $this->utilisateurModel->ouvrirSessionUnique((int)$userId);
 
         // Récupérer le sous-service
         $sousService = $this->model->getSousServiceByGestionnaire($gestionnaireId);
@@ -215,11 +216,12 @@ class GestionnaireController
         }
 
         // Mettre à jour la dernière connexion
-        $this->utilisateurModel->updateDerniereConnexion($user['id']);
+        $sessionToken = $this->utilisateurModel->ouvrirSessionUnique((int)$user['id']);
 
         // Connecter — initSession() démarre session_start()
         AuthHelper::connecterGestionnaire($user['gestionnaire_id'], $user['nom'], $user['email']);
         $_SESSION['user_id'] = $user['id'];
+        $_SESSION['active_session_token'] = $sessionToken;
 
         // Récupérer le sous-service
         $sousService = $this->model->getSousServiceByGestionnaire($user['gestionnaire_id']);
@@ -292,8 +294,7 @@ class GestionnaireController
 
     public function deconnecter(): void
     {
-        session_unset();
-        session_destroy();
+        AuthHelper::deconnecter();
         header('Location: accueil.php');
         exit;
     }

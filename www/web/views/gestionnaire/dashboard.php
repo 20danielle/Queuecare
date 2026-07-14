@@ -723,6 +723,42 @@ unset($_SESSION['type_message']);
     function t(key) { return I18N[key] || key; }
     const LOCALE = '<?= \LangHelper::getLang() === "en" ? "en-US" : "fr-FR" ?>';
 
+    let _queuecareAudioCtx = null;
+    function jouerAlerteNotification() {
+        try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) return;
+            _queuecareAudioCtx = _queuecareAudioCtx || new AudioContextClass();
+            if (_queuecareAudioCtx.state === 'suspended') _queuecareAudioCtx.resume();
+            const now = _queuecareAudioCtx.currentTime;
+            [0, 0.18].forEach((offset) => {
+                const osc = _queuecareAudioCtx.createOscillator();
+                const gain = _queuecareAudioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = 880;
+                gain.gain.setValueAtTime(0.0001, now + offset);
+                gain.gain.exponentialRampToValueAtTime(0.18, now + offset + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.16);
+                osc.connect(gain);
+                gain.connect(_queuecareAudioCtx.destination);
+                osc.start(now + offset);
+                osc.stop(now + offset + 0.17);
+            });
+        } catch (e) {
+            console.warn('Alerte sonore indisponible:', e);
+        }
+    }
+
+    ['click', 'keydown', 'touchstart'].forEach((eventName) => {
+        document.addEventListener(eventName, () => {
+            try {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                _queuecareAudioCtx = _queuecareAudioCtx || (AudioContextClass ? new AudioContextClass() : null);
+                if (_queuecareAudioCtx && _queuecareAudioCtx.state === 'suspended') _queuecareAudioCtx.resume();
+            } catch (e) {}
+        }, { once: true, passive: true });
+    });
+
     let semaineOffset = 0, currentQRPath = '', currentExpireAt = null, qrTimerInterval = null, autoRegenerateInterval = null, searchTimer, currentSection = 'file', isRefreshing = false;
     let _fileStatutFilter = null; // null = tous
     let _consultStatutFilter = null; // null = tous
@@ -760,6 +796,8 @@ unset($_SESSION['type_message']);
     }
     
     function mettreAJourFileAttente(file, preservePage) {
+        const anciens = new Set((_fileData || []).map(f => `${f.id}:${f.statut}:${f.rang || ''}`));
+        const doitSonner = !!preservePage && (file || []).some(f => !anciens.has(`${f.id}:${f.statut}:${f.rang || ''}`));
         const statutOrdreFile = {en_cours:0,en_pause:1,confirme:2,en_attente:3,absent:4,annule:5};
         file.sort((a,b)=>{
             const oa = statutOrdreFile[a.statut]??99, ob = statutOrdreFile[b.statut]??99;
@@ -770,6 +808,7 @@ unset($_SESSION['type_message']);
         renderFilePills();
         if(!preservePage) _filePageG = 1;
         afficherFile(_filtrerFileDataG(null), false);
+        if (doitSonner) jouerAlerteNotification();
     }
 
     function renderFilePills() {
@@ -949,6 +988,8 @@ unset($_SESSION['type_message']);
     let _consultPageG = 1;
 
     function mettreAJourConsultations(consultations, preservePage) {
+        const anciens = new Set((_consultationsData || []).map(c => `${c.id}:${c.statut}:${c.rang || ''}`));
+        const doitSonner = !!preservePage && (consultations || []).some(c => !anciens.has(`${c.id}:${c.statut}:${c.rang || ''}`));
         const statutOrdreConsult = {en_cours:0,en_pause:1,confirme:2,en_attente:3,traite:4,absent:5,annule:6};
         consultations.sort((a,b)=>{
             const oa = statutOrdreConsult[a.statut]??99, ob = statutOrdreConsult[b.statut]??99;
@@ -958,6 +999,7 @@ unset($_SESSION['type_message']);
         renderConsultsPills();
         if(!preservePage) _consultPageG = 1;
         afficherConsultations(_getConsultsFiltrees());
+        if (doitSonner) jouerAlerteNotification();
     }
 
     function renderConsultsPills() {

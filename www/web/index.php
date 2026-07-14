@@ -37,6 +37,12 @@ spl_autoload_register(function ($class) {
 LangHelper::init();
 
 $action = $_GET['action'] ?? '';
+$requestPath = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?: '';
+$apiPos = strpos($requestPath, '/api/');
+if ($apiPos !== false) {
+    require_once __DIR__ . '/controllers/MobileApiController.php';
+    (new MobileApiController())->dispatch($_SERVER['REQUEST_METHOD'] ?? 'GET', substr($requestPath, $apiPos));
+}
 
 // ── Actions API (retournent du JSON) ────────────────────────────────────────
 $apiActions = [

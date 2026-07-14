@@ -152,6 +152,7 @@ class MedecinController
         // 4. Connecter automatiquement
         AuthHelper::connecterMedecin($medecinId, $prenom . ' ' . $nom, $email);
         $_SESSION['user_id'] = $userId;
+        $_SESSION['active_session_token'] = $this->utilisateurModel->ouvrirSessionUnique((int)$userId);
 
         header('Location: medecin.php?action=dashboard');
         exit;
@@ -202,7 +203,7 @@ class MedecinController
         }
 
         // Mettre à jour la dernière connexion
-        $this->utilisateurModel->updateDerniereConnexion($user['id']);
+        $sessionToken = $this->utilisateurModel->ouvrirSessionUnique((int)$user['id']);
 
         // Stocker le vrai user_id (table utilisateurs) + medecin_id séparé
         AuthHelper::initSession();
@@ -212,6 +213,7 @@ class MedecinController
         $_SESSION['medecin_id']    = $user['medecin_id'];
         $_SESSION['role']          = $user['role'];
         $_SESSION['last_activity'] = time();
+        $_SESSION['active_session_token'] = $sessionToken;
 
         // Le médecin se reconnecte : on annule toute urgence en attente et
         // on le repasse "disponible" (actif), qu'une urgence ait été
@@ -297,8 +299,7 @@ class MedecinController
 
     public function deconnecter(): void
     {
-        session_unset();
-        session_destroy();
+        AuthHelper::deconnecter();
         header('Location: accueil.php');
         exit;
     }
