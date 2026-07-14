@@ -13,6 +13,44 @@ class MedecinModel
     public function __construct()
     {
         $this->db = Database::getInstance()->getConnection();
+        $this->ensureUrgenceColumns();
+    }
+
+    /**
+     * Auto-migration de sécurité :
+     * certaines instances Railway peuvent être déployées avec une base plus
+     * ancienne que le code. On ajoute ici les colonnes liées à la gestion
+     * d'urgence si elles n'existent pas encore afin d'éviter un crash au login
+     * médecin.
+     */
+    private function ensureUrgenceColumns(): void
+    {
+        $colonnes = [
+            'urgence_en_attente' => [
+                'sql' => "ALTER TABLE medecins ADD COLUMN urgence_en_attente tinyint(1) NOT NULL DEFAULT 0 AFTER statut",
+            ],
+            'urgence_notification_en_attente' => [
+                'sql' => "ALTER TABLE medecins ADD COLUMN urgence_notification_en_attente tinyint(1) NOT NULL DEFAULT 0 AFTER urgence_en_attente",
+            ],
+            'urgence_declenchee_par_gestionnaire_id' => [
+                'sql' => "ALTER TABLE medecins ADD COLUMN urgence_declenchee_par_gestionnaire_id INT NULL DEFAULT NULL AFTER urgence_notification_en_attente",
+            ],
+        ];
+
+        foreach ($colonnes as $colonne => $config) {
+            $check = $this->db->prepare(
+                "SELECT COUNT(*)
+                 FROM INFORMATION_SCHEMA.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE()
+                   AND TABLE_NAME = 'medecins'
+                   AND COLUMN_NAME = :col"
+            );
+            $check->execute([':col' => $colonne]);
+
+            if ((int)$check->fetchColumn() === 0) {
+                $this->db->exec($config['sql']);
+            }
+        }
     }
 
     /* ════════════════════════════════════════════════════════
