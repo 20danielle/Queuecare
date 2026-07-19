@@ -19,6 +19,73 @@ const messaging = firebase.messaging();
 
 // État de l'initialisation
 let isInitialized = false;
+let notificationAudioContext = null;
+let notificationAudioUnlocked = false;
+
+function prepareNotificationAudio() {
+    if (notificationAudioContext || !window.AudioContext) return;
+
+    try {
+        notificationAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (error) {
+        notificationAudioContext = null;
+    }
+}
+
+async function unlockNotificationAudio() {
+    if (notificationAudioUnlocked) return;
+
+    prepareNotificationAudio();
+    if (!notificationAudioContext) return;
+
+    try {
+        if (notificationAudioContext.state === 'suspended') {
+            await notificationAudioContext.resume();
+        }
+        notificationAudioUnlocked = true;
+    } catch (error) {
+        console.warn('Audio notifications unavailable:', error);
+    }
+}
+
+function playNotificationSound(kind = 'default') {
+    prepareNotificationAudio();
+    if (!notificationAudioContext) return;
+    if (!notificationAudioUnlocked && notificationAudioContext.state === 'suspended') return;
+
+    const now = notificationAudioContext.currentTime;
+    const patterns = {
+        urgent:  [880, 0.12, 0.05, 988, 0.12],
+        warning: [740, 0.10, 0.05, 740, 0.10],
+        success: [660, 0.08, 0.04, 784, 0.10],
+        default: [660, 0.08, 0.05, 660, 0.08],
+    };
+    const pattern = patterns[kind] || patterns.default;
+
+    let cursor = now;
+    for (let i = 0; i < pattern.length; i += 2) {
+        const frequency = pattern[i];
+        const duration = pattern[i + 1];
+        const oscillator = notificationAudioContext.createOscillator();
+        const gain = notificationAudioContext.createGain();
+
+        oscillator.type = 'sine';
+        oscillator.frequency.value = frequency;
+        gain.gain.value = 0.0001;
+
+        oscillator.connect(gain);
+        gain.connect(notificationAudioContext.destination);
+
+        gain.gain.setValueAtTime(0.0001, cursor);
+        gain.gain.exponentialRampToValueAtTime(0.08, cursor + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, cursor + duration);
+
+        oscillator.start(cursor);
+        oscillator.stop(cursor + duration + 0.02);
+
+        cursor += duration + (pattern[i + 2] || 0);
+    }
+}
 
 /**
  * Demander la permission de notification et obtenir le token
@@ -26,6 +93,7 @@ let isInitialized = false;
 async function requestNotificationPermission() {
     try {
         console.log('Demande de permission de notification...');
+        await unlockNotificationAudio();
 
         // Demander la permission
         const permission = await Notification.requestPermission();
@@ -143,21 +211,38 @@ async function checkNotificationStatus() {
 messaging.onMessage((payload) => {
     console.log('📨 Message reçu au premier plan:', payload);
 
+    const data = payload.data || {};
+    const notif = payload.notification || {};
+    const type = String(data.type || notif.tag || 'default').toUpperCase();
+    const soundKind = (
+        type.includes('URGENCE') ? 'urgent' :
+        type.includes('APPEL_IMMEDIAT') ? 'urgent' :
+        type.includes('CLOTURE_ABSENT') ? 'warning' :
+        type.includes('ANNULATION') ? 'warning' :
+        type.includes('DECALAGE') ? 'warning' :
+        type.includes('RAPPEL') ? 'warning' :
+        type.includes('CONFIRMATION') ? 'success' :
+        type.includes('RETOUR_EXAMEN') ? 'urgent' :
+        'default'
+    );
+
+    playNotificationSound(soundKind);
+
     // Afficher une notification même au premier plan
     if (Notification.permission === 'granted') {
-        const notification = new Notification(payload.notification.title, {
-            body: payload.notification.body,
+        const notification = new Notification(notif.title || 'QueueCare', {
+            body: notif.body || '',
             icon: '/public/images/logo.png',
             badge: '/public/images/badge.png',
-            data: payload.data,
-            requireInteraction: true
+            data,
+            requireInteraction: soundKind === 'urgent'
         });
 
         // Gérer le clic sur la notification
         notification.onclick = () => {
             window.focus();
-            if (payload.data && payload.data.url) {
-                window.location.href = payload.data.url;
+            if (data && data.url) {
+                window.location.href = data.url;
             }
             notification.close();
         };
@@ -166,9 +251,9 @@ messaging.onMessage((payload) => {
     // Déclencher un événement personnalisé pour l'interface
     const event = new CustomEvent('notification-received', {
         detail: {
-            title: payload.notification.title,
-            body: payload.notification.body,
-            data: payload.data
+            title: notif.title,
+            body: notif.body,
+            data
         }
     });
     document.dispatchEvent(event);
@@ -237,13 +322,21 @@ async function initNotifications() {
 // Écouter le chargement de la page
 document.addEventListener('DOMContentLoaded', () => {
     initNotifications();
+    prepareNotificationAudio();
+
+    const enableAudioOnFirstGesture = () => {
+        unlockNotificationAudio();
+    };
+    ['click', 'keydown', 'touchstart'].forEach((evt) => {
+        document.addEventListener(evt, enableAudioOnFirstGesture, { once: true, passive: true });
+    });
 
     // Bouton d'activation des notifications
     const enableBtn = document.getElementById('enableNotifications');
     if (enableBtn) {
         enableBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            requestNotificationPermission();
+            unlockNotificationAudio().finally(() => requestNotificationPermission());
         });
     }
 

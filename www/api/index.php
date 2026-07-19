@@ -2,6 +2,14 @@
 ini_set('display_errors', '0');
 error_reporting(E_ALL);
 
+
+
+
+
+
+
+
+date_default_timezone_set('Africa/Douala');
 ob_start();
 
 header('Content-Type: application/json; charset=utf-8');

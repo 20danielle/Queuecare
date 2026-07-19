@@ -55,6 +55,29 @@ firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 let isInitialized = false;
 let notificationCount = 0;
+let notificationAudioContext = null;
+let notificationAudioUnlocked = false;
+
+function prepareNotificationAudio() {
+    if (notificationAudioContext || !window.AudioContext) return;
+    try {
+        notificationAudioContext = new(window.AudioContext || window.webkitAudioContext)();
+    } catch (_) {
+        notificationAudioContext = null;
+    }
+}
+
+async function unlockNotificationAudio() {
+    if (notificationAudioUnlocked) return;
+    prepareNotificationAudio();
+    if (!notificationAudioContext) return;
+    try {
+        if (notificationAudioContext.state === 'suspended') {
+            await notificationAudioContext.resume();
+        }
+        notificationAudioUnlocked = true;
+    } catch (_) {}
+}
 
 /* ──────────────────────────────────────────────────────────
    Permission & Token
@@ -62,6 +85,7 @@ let notificationCount = 0;
 
 async function requestNotificationPermission() {
     try {
+        await unlockNotificationAudio();
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
             showBanniere('🔕 Notifications désactivées par le navigateur.', 'notif-danger', false);
@@ -135,7 +159,9 @@ messaging.onMessage((payload) => {
     showBanniere(message, cfg.classe, !TYPES_PERSISTANTS.includes(type));
 
     // 3 — Son discret
-    if (cfg.son) jouerSon();
+    if (cfg.son) {
+        unlockNotificationAudio().finally(() => jouerSon());
+    }
 
     // 4 — Badge
     incrementerBadge();
@@ -246,17 +272,26 @@ function reinitialiserBadge() {
 
 function jouerSon() {
     try {
-        const ctx = new(window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gn = ctx.createGain();
-        osc.connect(gn);
-        gn.connect(ctx.destination);
-        osc.type = 'sine';
-        osc.frequency.value = 880;
-        gn.gain.setValueAtTime(0.15, ctx.currentTime);
-        gn.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.4);
+        prepareNotificationAudio();
+        if (!notificationAudioContext) return;
+        if (!notificationAudioUnlocked && notificationAudioContext.state === 'suspended') return;
+
+        const ctx = notificationAudioContext;
+        const now = ctx.currentTime;
+        const freqs = [880, 988];
+        freqs.forEach((freq, index) => {
+            const osc = ctx.createOscillator();
+            const gn = ctx.createGain();
+            osc.connect(gn);
+            gn.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            gn.gain.setValueAtTime(0.0001, now + index * 0.18);
+            gn.gain.exponentialRampToValueAtTime(0.12, now + index * 0.18 + 0.02);
+            gn.gain.exponentialRampToValueAtTime(0.0001, now + index * 0.18 + 0.16);
+            osc.start(now + index * 0.18);
+            osc.stop(now + index * 0.18 + 0.18);
+        });
     } catch (_) { /* Navigateurs sans Web Audio API */ }
 }
 
@@ -402,12 +437,16 @@ async function testNotification(token) {
 
 document.addEventListener('DOMContentLoaded', () => {
     initNotifications();
+    prepareNotificationAudio();
+    ['click', 'keydown', 'touchstart'].forEach((evt) => {
+        document.addEventListener(evt, unlockNotificationAudio, { once: true, passive: true });
+    });
 
     const enableBtn = document.getElementById('enableNotifications');
     if (enableBtn) {
         enableBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            requestNotificationPermission();
+            unlockNotificationAudio().finally(() => requestNotificationPermission());
         });
     }
 
