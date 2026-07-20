@@ -1,5 +1,5 @@
 <?php
-$path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+$path = parse_url($_SERVER['REST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $base = __DIR__ . '/www';
 
 if ($path === '/' || $path === '') {
