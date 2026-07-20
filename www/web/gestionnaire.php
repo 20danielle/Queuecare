@@ -47,7 +47,7 @@ if (!in_array($action, ['inscription', 'connexion'])) {
     if (!AuthHelper::estGestionnaire()) {
         if ($isAjax) {
             header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'Session expirée, veuillez vous reconnecter.', 'redirect' => 'gestionnaire.php?action=connexion']);
+            echo json_encode(['success' => false, 'message' => 'Session expirée, veuillez vous reconnecter.', 'redirect' => 'gestionnaire.php?action=connexion&session_remplacee=1']);
             exit;
         }
         header('Location: accueil.php');
@@ -57,10 +57,10 @@ if (!in_array($action, ['inscription', 'connexion'])) {
     if (!$sessionOk) {
         if ($isAjax) {
             header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'Session expirée, veuillez vous reconnecter.', 'redirect' => 'gestionnaire.php?action=connexion']);
+            echo json_encode(['success' => false, 'message' => 'Session expirée, veuillez vous reconnecter.', 'redirect' => 'gestionnaire.php?action=connexion&session_remplacee=1']);
             exit;
         }
-        header('Location: gestionnaire.php?action=connexion&timeout=1');
+        header('Location: gestionnaire.php?action=connexion&session_remplacee=1');
         exit;
     }
 }

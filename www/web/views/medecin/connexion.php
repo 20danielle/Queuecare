@@ -99,6 +99,13 @@
             </div>
             <?php endif; ?>
 
+            <?php if (isset($_GET['session_remplacee']) && $_GET['session_remplacee'] == 1): ?>
+            <div class="alert alert-danger">
+                <i class="fa-solid fa-shield-halved"></i>
+                Votre session a ete fermee car ce compte a ete ouvert sur un autre appareil.
+            </div>
+            <?php endif; ?>
+
             <?php if (isset($_GET['urgence']) && $_GET['urgence'] == 1): ?>
             <div class="alert alert-success">
                 <i class="fa-solid fa-triangle-exclamation"></i>

@@ -97,6 +97,13 @@
             </div>
             <?php endif; ?>
             
+            <?php if (isset($_GET['session_remplacee']) && $_GET['session_remplacee'] == 1): ?>
+            <div class="medical-alert medical-alert-error">
+                <i class="fa-solid fa-shield-halved"></i>
+                Votre session a ete fermee car ce compte a ete ouvert sur un autre appareil.
+            </div>
+            <?php endif; ?>
+
             <!-- Formulaire de connexion -->
             <form method="POST" action="gestionnaire.php?action=connexion" id="connexionForm">
                 

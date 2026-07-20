@@ -18,14 +18,54 @@ LangHelper::init();
 // L'inscription est publique : pas de vérification d'accès
 $action = $_GET['action'] ?? 'dashboard';
 
+$ajaxActions = [
+    'api_sous_services',
+    'get_consultations_data', 'get_stats_data',
+    'demarrer_consultation_ajax', 'terminer_consultation_ajax',
+    'marquer_absent_ajax', 'annuler_toutes_ajax',
+    'mettre_en_pause_ajax', 'reprendre_consultation_ajax',
+    'get_planning_medecin',
+    'get_profil_data', 'mettre_a_jour_profil', 'verifier_mdp',
+    'get_historique',
+    'get_creneaux_disponibles',
+    'fixer_prochain_rdv_ajax',
+    'get_stats_evolution',
+    'get_temps_attente_evolution',
+    'get_dashboard_medecin_data',
+    'changer_langue',
+];
+$isAjax = in_array($action, $ajaxActions, true);
+
 if ($action !== 'inscription') {
     // Vérification des droits d'accès
     if (!AuthHelper::peutAccederEspaceMedecin()) {
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => false,
+                'message' => 'Session expiree ou remplacee par une autre connexion.',
+                'redirect' => 'medecin.php?action=connexion&session_remplacee=1',
+            ]);
+            exit;
+        }
         header('Location: accueil.php');
         exit;
     }
     // Vérification du timeout de session
-    AuthHelper::verifierSession('medecin.php?action=connexion');
+    $sessionOk = AuthHelper::verifierSession(null);
+    if (!$sessionOk) {
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => false,
+                'message' => 'Session expiree ou remplacee par une autre connexion.',
+                'redirect' => 'medecin.php?action=connexion&session_remplacee=1',
+            ]);
+            exit;
+        }
+        header('Location: medecin.php?action=connexion&session_remplacee=1');
+        exit;
+    }
 }
 
 // Configuration

@@ -768,6 +768,46 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
         }, { once: true, passive: true });
     });
 
+    const queuecareNativeAlert = window.alert.bind(window);
+    window.alert = function(message) {
+        jouerAlerteNotification();
+        queuecareNativeAlert(message);
+    };
+
+    let queuecareLastSoundAt = 0;
+    function signalerNotificationDashboard() {
+        const now = Date.now();
+        if (now - queuecareLastSoundAt < 350) return;
+        queuecareLastSoundAt = now;
+        jouerAlerteNotification();
+    }
+
+    function gererRedirectSession(d) {
+        if (!d || !d.redirect) return false;
+        if (d.message) alert(d.message);
+        window.location.href = d.redirect;
+        return true;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (document.querySelector('.alert, .action-msg, .profil-error')) {
+            signalerNotificationDashboard();
+        }
+        const observer = new MutationObserver((mutations) => {
+            const selectors = '.alert, .action-msg, .profil-error, .profil-success, .error-msg';
+            for (const mutation of mutations) {
+                for (const node of mutation.addedNodes) {
+                    if (node.nodeType !== 1) continue;
+                    if (node.matches?.(selectors) || node.querySelector?.(selectors)) {
+                        signalerNotificationDashboard();
+                        return;
+                    }
+                }
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    });
+
     let currentSection = 'consultations', isRefreshing = false, isRefreshingStats = false, planningOffset = 0;
     let _medConsultStatutFilter = null; // null = tous
     let _histStatutFilterMed = ''; // '' = tous
@@ -782,6 +822,7 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
     const medecinJoursTravail = <?= json_encode($medecinJoursTravail) ?>;
     
     function afficherMessage(msg, type) {
+        signalerNotificationDashboard();
         const c = document.getElementById('messageContainer');
         if (!c) return;
         const d = document.createElement('div');
@@ -820,8 +861,8 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
                     }
                     mettreAJourConsultations(d.consultations, !!auto);
                     mettreAJourStatistiques(d.stats);
-                } else if (d.redirect) {
-                    window.location.href = d.redirect;
+                } else if (gererRedirectSession(d)) {
+                    return;
                 }
                 // Si échec auth ou autre erreur : on garde l'affichage existant intact
             })
@@ -982,7 +1023,7 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
     function escapeHtml(t) { if(!t) return ''; const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
     
     function _handleAjaxResponse(d, successMsg) {
-        if (d.redirect) { window.location.href = d.redirect; return; }
+        if (gererRedirectSession(d)) return;
         if (d.success) { afficherMessage(successMsg, 'success'); rafraichirConsultations(); }
         else afficherMessage(d.message || t('generic_error'), 'error');
     }
@@ -994,7 +1035,7 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
             body: 'consultation_id=' + id
         })
         .then(r => r.json()).then(d => {
-            if (d.redirect) { window.location.href = d.redirect; return; }
+            if (gererRedirectSession(d)) return;
             if (d.success) {
                 afficherMessage(t('consultation_started'), 'success');
                 rafraichirConsultations();
@@ -1012,7 +1053,7 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
             body: 'consultation_id=' + id
         })
         .then(r => r.json()).then(d => {
-            if (d.redirect) { if (d.message) alert(d.message); window.location.href = d.redirect; return; }
+            if (gererRedirectSession(d)) return;
             if (d.success) {
                 afficherMessage(t('consultation_finished'), 'success');
                 rafraichirConsultations();
@@ -1031,7 +1072,7 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
             body: 'consultation_id=' + id
         })
         .then(r => r.json()).then(d => {
-            if (d.redirect) { if (d.message) alert(d.message); window.location.href = d.redirect; return; }
+            if (gererRedirectSession(d)) return;
             if (d.success) {
                 afficherMessage(t('patient_marked_absent'), 'success');
                 rafraichirConsultations();
@@ -1186,7 +1227,7 @@ $pauseFin = $serviceHoraires['pause_fin'] ? substr($serviceHoraires['pause_fin']
         fetch('medecin.php?action=get_historique&' + params.toString())
             .then(r => r.json())
             .then(d => {
-                if(d.redirect) { window.location.href = d.redirect; return; }
+                if(gererRedirectSession(d)) return;
                 if(!d.success) { if(content && !silent) content.innerHTML = `<div class="empty-state">${d.message||'Erreur'}</div>`; return; }
                 const tot = document.getElementById('historiqueTotal');
                 if(tot) tot.textContent = d.total + ' consultation(s)';

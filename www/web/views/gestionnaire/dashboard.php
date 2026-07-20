@@ -759,6 +759,46 @@ unset($_SESSION['type_message']);
         }, { once: true, passive: true });
     });
 
+    const queuecareNativeAlert = window.alert.bind(window);
+    window.alert = function(message) {
+        jouerAlerteNotification();
+        queuecareNativeAlert(message);
+    };
+
+    let queuecareLastSoundAt = 0;
+    function signalerNotificationDashboard() {
+        const now = Date.now();
+        if (now - queuecareLastSoundAt < 350) return;
+        queuecareLastSoundAt = now;
+        jouerAlerteNotification();
+    }
+
+    function gererRedirectSession(d) {
+        if (!d || !d.redirect) return false;
+        if (d.message) alert(d.message);
+        window.location.href = d.redirect;
+        return true;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (document.querySelector('.alert, .action-msg, .profil-error, .medical-alert')) {
+            signalerNotificationDashboard();
+        }
+        const observer = new MutationObserver((mutations) => {
+            const selectors = '.alert, .action-msg, .profil-error, .profil-success, .medical-alert, .error-msg, .qr-success, .qr-error';
+            for (const mutation of mutations) {
+                for (const node of mutation.addedNodes) {
+                    if (node.nodeType !== 1) continue;
+                    if (node.matches?.(selectors) || node.querySelector?.(selectors)) {
+                        signalerNotificationDashboard();
+                        return;
+                    }
+                }
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    });
+
     let semaineOffset = 0, currentQRPath = '', currentExpireAt = null, qrTimerInterval = null, autoRegenerateInterval = null, searchTimer, currentSection = 'file', isRefreshing = false;
     let _fileStatutFilter = null; // null = tous
     let _consultStatutFilter = null; // null = tous
@@ -767,6 +807,7 @@ unset($_SESSION['type_message']);
     function escapeHtml(t) { if(!t) return ''; const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
     
     function afficherMessage(msg, type) {
+        signalerNotificationDashboard();
         const c = document.getElementById('messageContainer'); if(!c) return;
         const m = document.createElement('div');
         m.className = `action-msg ${type === 'error' ? 'action-msg-error' : 'action-msg-success'}`;
@@ -783,6 +824,7 @@ unset($_SESSION['type_message']);
         fetch('gestionnaire.php?action=get_dashboard_data')
             .then(r=>r.json()).then(d=>{
                 console.log('[DEBUG rafraichirDonnees]', d);
+                if(gererRedirectSession(d)) return;
                 if(d.success){
                     if(currentSection==='file'){ mettreAJourFileAttente(d.file, !!auto); const fc=document.getElementById('fileCount'); if(fc) fc.innerHTML=`${d.file.length} patient(s)`; }
                     if(currentSection==='consultations'){ mettreAJourConsultations(d.consultations, !!auto); const cc=document.getElementById('consultationsCount'); if(cc) cc.innerHTML=d.consultations.length; }
@@ -1409,7 +1451,7 @@ unset($_SESSION['type_message']);
     
     function soumettreFormulaireStatut(form) {
         fetch('gestionnaire.php?action=traiter_action_ajax',{method:'POST',body:new FormData(form),headers:{'X-Requested-With':'XMLHttpRequest'}})
-            .then(r=>r.json()).then(d=>{if(d.success){afficherMessage(d.message,'success');rafraichirDonnees();}else afficherMessage(d.message||t('generic_error'),'error');})
+            .then(r=>r.json()).then(d=>{if(gererRedirectSession(d))return;if(d.success){afficherMessage(d.message,'success');rafraichirDonnees();}else afficherMessage(d.message||t('generic_error'),'error');})
             .catch(()=>afficherMessage(t('generic_error'),'error'));
     }
 
@@ -1420,6 +1462,7 @@ unset($_SESSION['type_message']);
         fd.append('consultation_id', id);
         fetch('gestionnaire.php?action=traiter_action_ajax', { method:'POST', body:fd, headers:{'X-Requested-With':'XMLHttpRequest'} })
             .then(r=>r.json()).then(d=>{
+                if(gererRedirectSession(d)) return;
                 if(d.success){ afficherMessage(d.message,'success'); rafraichirDonnees(); }
                 else afficherMessage(d.message||t('generic_error'),'error');
             }).catch(()=>afficherMessage(t('network_error_short'),'error'));
@@ -1453,6 +1496,7 @@ unset($_SESSION['type_message']);
         fd.append('medecin_id', medecinId);
         fetch('gestionnaire.php?action=traiter_action_ajax', { method:'POST', body:fd, headers:{'X-Requested-With':'XMLHttpRequest'} })
             .then(r=>r.json()).then(d=>{
+                if(gererRedirectSession(d)) return;
                 if(d.success) { afficherMessage(d.message, 'success'); rafraichirDonnees(); }
                 else afficherMessage(d.message || t('generic_error'), 'error');
             }).catch(()=>afficherMessage(t('network_error_short'), 'error'));
@@ -1465,6 +1509,7 @@ unset($_SESSION['type_message']);
         fd.append('statut', statut);
         fetch('gestionnaire.php?action=traiter_action_ajax', { method:'POST', body:fd, headers:{'X-Requested-With':'XMLHttpRequest'} })
             .then(r=>r.json()).then(d=>{
+                if(gererRedirectSession(d)) return;
                 if(d.success){ afficherMessage(d.message,'success'); rafraichirDonnees(); }
                 else afficherMessage(d.message||t('generic_error'),'error');
             }).catch(()=>afficherMessage(t('network_error_short'),'error'));
@@ -1476,6 +1521,7 @@ unset($_SESSION['type_message']);
         fetch('gestionnaire.php?action=traiter_action_ajax',{method:'POST',body:fd,headers:{'X-Requested-With':'XMLHttpRequest'}})
             .then(r=>r.json()).then(d=>{
                 if(btn){btn.innerHTML=ot;btn.disabled=false;}
+                if(gererRedirectSession(d)) return;
                 if(d.success){fermerModalConsultation();afficherMessage(d.message,'success');rafraichirDonnees();}
                 else afficherMessage(d.message||'Erreur','error');
             }).catch(()=>{if(btn){btn.innerHTML=ot;btn.disabled=false;}afficherMessage('Erreur','error');});
@@ -1541,7 +1587,7 @@ unset($_SESSION['type_message']);
         fetch('gestionnaire.php?action=get_historique&' + params.toString())
             .then(r => r.json())
             .then(d => {
-                if(d.redirect) { window.location.href = d.redirect; return; }
+                if(gererRedirectSession(d)) return;
                 if(!d.success) { if(content && !silent) content.innerHTML = `<div class="empty-state">${d.message||'Erreur'}</div>`; return; }
                 const tot = document.getElementById('historiqueTotal');
                 if(tot) tot.textContent = d.total + ' consultation(s)';
@@ -1755,8 +1801,8 @@ unset($_SESSION['type_message']);
     
     function ouvrirModalQR(){ const m=document.getElementById('modalQR'); if(m) m.classList.add('active'); chargerQRCode(); }
     function fermerModalQR(){ const m=document.getElementById('modalQR'); if(m) m.classList.remove('active'); if(qrTimerInterval) clearInterval(qrTimerInterval); }
-    function chargerQRCode(){ showQRLoading(true); fetch('gestionnaire.php?action=get_qrcode_actif').then(r=>r.json()).then(d=>{if(d.redirect){showQRMessage(d.message||t('session_expired'),'error');return;} if(d.success && d.qr_code_path) afficherQRCode(d.qr_code_path, d.expire_at); else genererNouveauQRCode();}).catch(()=>{showQRMessage(t('network_error'),'error');}); }
-    function genererNouveauQRCode(){ showQRLoading(true); const fd=new FormData(); fd.append('sous_service_id','<?= $sousService['id'] ?? 0 ?>'); fetch('gestionnaire.php?action=generer_qrcode',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{if(d.redirect){showQRMessage(d.message||t('session_expired'),'error');return;} if(d.success) afficherQRCode(d.qr_code_path,d.expire_at); else {showQRMessage(d.error||d.message||t('generation_error'),'error'); showQRLoading(false);}}).catch(()=>{showQRMessage(t('network_error'),'error');showQRLoading(false);}); }
+    function chargerQRCode(){ showQRLoading(true); fetch('gestionnaire.php?action=get_qrcode_actif').then(r=>r.json()).then(d=>{if(gererRedirectSession(d))return; if(d.success && d.qr_code_path) afficherQRCode(d.qr_code_path, d.expire_at); else genererNouveauQRCode();}).catch(()=>{showQRMessage(t('network_error'),'error');}); }
+    function genererNouveauQRCode(){ showQRLoading(true); const fd=new FormData(); fd.append('sous_service_id','<?= $sousService['id'] ?? 0 ?>'); fetch('gestionnaire.php?action=generer_qrcode',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{if(gererRedirectSession(d))return; if(d.success) afficherQRCode(d.qr_code_path,d.expire_at); else {showQRMessage(d.error||d.message||t('generation_error'),'error'); showQRLoading(false);}}).catch(()=>{showQRMessage(t('network_error'),'error');showQRLoading(false);}); }
     function regenererQRCode(){ if(confirm('Générer un nouveau QR code ?')) genererNouveauQRCode(); }
     function afficherQRCode(path,expireAt){
         // Normaliser le chemin : s'assurer qu'il pointe vers public/qrcodes/
@@ -1781,7 +1827,7 @@ unset($_SESSION['type_message']);
     function telechargerQRCode(){ if(currentQRPath) window.location.href='gestionnaire.php?action=telecharger_qrcode&path='+encodeURIComponent(currentQRPath); }
     function imprimerQRCode(){ if(currentQRPath){ const w=window.open('','_blank'); if(w){ w.document.write(`<html><head><title>QR Code</title><style>body{text-align:center;padding:50px;}img.qr{width:250px;}img.logo{height:40px;margin-bottom:10px;}</style></head><body><img class="logo" src="${location.origin}/public/img/logo-queuecare-icon.png" alt=""><br><img class="qr" src="${currentQRPath}"><h2>QueueCare</h2><p><?= htmlspecialchars($sousService['service_nom']??'') ?> - <?= htmlspecialchars($sousService['nom']??'') ?></p><script>window.print();<\/script></body></html>`); w.document.close(); } } }
     function showQRLoading(show){ const l=document.getElementById('qrLoadingState'), c=document.getElementById('qrContentState'); if(show){if(l)l.classList.remove('hidden');if(c)c.classList.add('hidden');}else if(l)l.classList.add('hidden'); }
-    function showQRMessage(msg,type){ const d=document.getElementById('qrMessage'); if(!d) return; const qc=document.getElementById('qrContentState'); if(qc) qc.classList.remove('hidden'); const img=document.getElementById('qrCodeImage'); if(img) img.style.display='none'; d.textContent=msg; d.classList.remove('hidden','qr-success','qr-error'); d.classList.add(type==='success'?'qr-success':'qr-error'); setTimeout(()=>{if(d)d.classList.add('hidden');},3000); }
+    function showQRMessage(msg,type){ signalerNotificationDashboard(); const d=document.getElementById('qrMessage'); if(!d) return; const qc=document.getElementById('qrContentState'); if(qc) qc.classList.remove('hidden'); const img=document.getElementById('qrCodeImage'); if(img) img.style.display='none'; d.textContent=msg; d.classList.remove('hidden','qr-success','qr-error'); d.classList.add(type==='success'?'qr-success':'qr-error'); setTimeout(()=>{if(d)d.classList.add('hidden');},3000); }
     
     // Emploi du temps
     function getLundiSemaine(offset=0){ const t=new Date(), dow=t.getDay(), diff=dow===0?-6:-(dow-1), l=new Date(t); l.setDate(t.getDate()+diff+(offset*7)); return l; }
