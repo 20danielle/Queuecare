@@ -79,7 +79,7 @@
             <span class="card-link">Ouvrir →</span>
         </a>
 
-        <a href="/download/queuecare.apk" class="card apk">
+        <a href="/download/app.apk" class="card apk">
             <div class="icon">📱</div>
             <h3>Application Android</h3>
             <p>Téléchargez l'APK et installez-le sur votre smartphone Android pour tester l'expérience patient.</p>
